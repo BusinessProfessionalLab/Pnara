@@ -1,0 +1,8 @@
+**/bin
+**/obj
+**/out
+.certs
+.git
+.vs
+*.user
+*.suo
