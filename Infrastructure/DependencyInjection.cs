@@ -24,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IMenuGroupRepository, MenuGroupRepository>();
         services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+        services.AddScoped<IModifierGroupRepository, ModifierGroupRepository>();
         services.AddScoped<ICompanyInfoRepository, CompanyInfoRepository>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
