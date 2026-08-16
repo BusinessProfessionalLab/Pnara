@@ -22,6 +22,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
+builder.Services.AddScoped<ModifierGroupService>();
 builder.Services.AddScoped<CompanyInfoService>();
 
 builder.Services.AddCors(options =>

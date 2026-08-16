@@ -8,4 +8,5 @@ public record MenuItemResponse(
     decimal Price,
     string? ImageUrl,
     bool IsAvailable,
-    int DisplayOrder);
+    int DisplayOrder,
+    IReadOnlyList<ModifierGroupResponse>? ModifierGroups = null);

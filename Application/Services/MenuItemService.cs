@@ -8,7 +8,7 @@ using Domain.Repositories;
 
 namespace Application.Services;
 
-public class MenuItemService(IMenuItemRepository menuItemRepository, IFileStorage fileStorage)
+public class MenuItemService(IMenuItemRepository menuItemRepository, IFileStorage fileStorage, IModifierGroupRepository modifierGroupRepository)
 {
     public async Task<MenuItemResponse> CreateAsync(CreateMenuItemRequest request)
     {
@@ -135,6 +135,15 @@ public class MenuItemService(IMenuItemRepository menuItemRepository, IFileStorag
     public async Task<IReadOnlyList<MenuItemResponse>> GetByGroupAsync(Guid groupId)
     {
         var items = await menuItemRepository.GetByGroupAsync(groupId);
-        return items.Select(item => item.ToResponse()).ToList();
+        var responses = new List<MenuItemResponse>();
+
+        foreach (var item in items)
+        {
+            var modifierGroups = await modifierGroupRepository.GetByMenuItemAsync(item.Id);
+            var modifierGroupResponses = modifierGroups.Select(g => g.ToResponse()).ToList();
+            responses.Add(item.ToResponse(modifierGroupResponses));
+        }
+
+        return responses;
     }
 }
