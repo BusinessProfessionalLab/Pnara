@@ -12,17 +12,22 @@ namespace Infrastructure.Auth;
 
 public class TokenService(IOptions<JwtSettings> options) : ITokenService
 {
-    public TokenResult GenerateToken(User user)
+    public TokenResult GenerateToken(User user, IEnumerable<string>? permissions = null)
     {
         var settings = options.Value;
         var expiresAt = DateTime.UtcNow.AddMinutes(settings.ExpiryMinutes);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim("role", user.Role.Name)
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new("role", user.Role.Name)
         };
+
+        if (permissions != null)
+        {
+            claims.AddRange(permissions.Select(p => new Claim("permission", p)));
+        }
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

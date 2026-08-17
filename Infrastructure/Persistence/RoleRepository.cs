@@ -36,6 +36,12 @@ public class RoleRepository(AppDbContext dbContext) : IRoleRepository
     public async Task<bool> HasUsersAsync(Guid roleId, CancellationToken cancellationToken = default) =>
         await dbContext.Users.AnyAsync(user => user.RoleId == roleId, cancellationToken);
 
+    public async Task<Role?> GetWithPermissionsAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await dbContext.Roles
+            .Include(r => r.RolePermissions)
+            .ThenInclude(rp => rp.Permission)
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         await dbContext.SaveChangesAsync(cancellationToken);
 }

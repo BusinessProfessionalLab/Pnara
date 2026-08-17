@@ -1,3 +1,4 @@
+using Application.Common;
 using Application.DTOs;
 using Application.Exceptions;
 using Application.Mappers;
@@ -6,7 +7,7 @@ using Domain.Repositories;
 
 namespace Application.Services;
 
-public class RoleService(IRoleRepository roleRepository)
+public class RoleService(IRoleRepository roleRepository, IPermissionRepository permissionRepository)
 {
     public async Task<RoleDto> CreateAsync(CreateRoleRequest request)
     {
@@ -63,5 +64,45 @@ public class RoleService(IRoleRepository roleRepository)
     {
         var roles = await roleRepository.GetAllAsync();
         return roles.Select(role => role.ToDto()).ToList();
+    }
+
+    public async Task<Result> AssignPermissionsToRoleAsync(Guid roleId, Guid[] permissionIds)
+    {
+        var role = await roleRepository.GetWithPermissionsAsync(roleId)
+            ?? throw new RoleNotFoundException($"Role with id '{roleId}' was not found.");
+
+        foreach (var permissionId in permissionIds)
+        {
+            if (role.HasPermission(permissionId))
+                continue;
+
+            var permission = await permissionRepository.GetByIdAsync(permissionId)
+                ?? throw new PermissionNotFoundException($"Permission with id '{permissionId}' was not found.");
+
+            role.AssignPermission(permission);
+        }
+
+        await roleRepository.SaveChangesAsync();
+        return Result.Success();
+    }
+
+    public async Task<Result> RevokePermissionFromRoleAsync(Guid roleId, Guid permissionId)
+    {
+        var role = await roleRepository.GetWithPermissionsAsync(roleId)
+            ?? throw new RoleNotFoundException($"Role with id '{roleId}' was not found.");
+
+        role.RevokePermission(permissionId);
+
+        await roleRepository.SaveChangesAsync();
+        return Result.Success();
+    }
+
+    public async Task<Result<IReadOnlyList<PermissionDto>>> GetRolePermissionsAsync(Guid roleId)
+    {
+        var role = await roleRepository.GetWithPermissionsAsync(roleId)
+            ?? throw new RoleNotFoundException($"Role with id '{roleId}' was not found.");
+
+        var permissions = role.GetPermissions().Select(p => p.ToDto()).ToList();
+        return Result<IReadOnlyList<PermissionDto>>.Success(permissions);
     }
 }
