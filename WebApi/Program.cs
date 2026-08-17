@@ -68,7 +68,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("AdminOnly", policy => policy.RequireClaim("role", SystemRoles.Admin))
-    .AddPolicy("AdminOrOperator", policy => policy.RequireClaim("role", SystemRoles.Admin, SystemRoles.Operator));
+    .AddPolicy("AdminOrOperator", policy => policy.RequireClaim("role", SystemRoles.Admin, SystemRoles.Operator))
+    .AddPolicy("RolesManage", policy => policy.RequireClaim("permission", "roles.manage"));
 
 builder.Services.AddSwaggerGen(options =>
 {

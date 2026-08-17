@@ -5,6 +5,6 @@ namespace Application.Interfaces;
 
 public interface ITokenService
 {
-    TokenResult GenerateToken(User user);
+    TokenResult GenerateToken(User user, IEnumerable<string>? permissions = null);
     string GenerateRefreshToken();
 }

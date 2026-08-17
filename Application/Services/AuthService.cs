@@ -114,7 +114,10 @@ public class AuthService(
 
     private async Task<UserResponse> CreateUserSessionAsync(User user)
     {
-        var token = tokenService.GenerateToken(user);
+        var roleWithPermissions = await roleRepository.GetWithPermissionsAsync(user.RoleId);
+        var permissions = roleWithPermissions?.GetPermissions().Select(p => p.Name) ?? [];
+
+        var token = tokenService.GenerateToken(user, permissions);
         var refreshTokenValue = tokenService.GenerateRefreshToken();
 
         var refreshToken = RefreshToken.Create(user.Id, refreshTokenValue);

@@ -1,3 +1,4 @@
+using Application.Common;
 using Application.DTOs;
 using Application.Services;
 using Domain.Constants;
@@ -37,5 +38,44 @@ public class RolesController(RoleService roleService) : ControllerBase
     {
         await roleService.DeleteAsync(id);
         return NoContent();
+    }
+
+    [HttpPut("{roleId:guid}/permissions")]
+    [Authorize(Policy = "RolesManage")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> AssignPermissions(Guid roleId, AssignPermissionsRequest request)
+    {
+        var result = await roleService.AssignPermissionsToRoleAsync(roleId, request.PermissionIds);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+
+        return Ok();
+    }
+
+    [HttpDelete("{roleId:guid}/permissions/{permissionId:guid}")]
+    [Authorize(Policy = "RolesManage")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RevokePermission(Guid roleId, Guid permissionId)
+    {
+        var result = await roleService.RevokePermissionFromRoleAsync(roleId, permissionId);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+
+        return Ok();
+    }
+
+    [HttpGet("{roleId:guid}/permissions")]
+    [Authorize(Policy = "RolesManage")]
+    [ProducesResponseType(typeof(IReadOnlyList<PermissionDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRolePermissions(Guid roleId)
+    {
+        var result = await roleService.GetRolePermissionsAsync(roleId);
+
+        if (!result.IsSuccess)
+            return BadRequest(new { message = result.Error });
+
+        return Ok(result.Value);
     }
 }
