@@ -18,6 +18,15 @@ public class PermissionRepository(AppDbContext dbContext) : IPermissionRepositor
     public async Task AddAsync(Permission permission, CancellationToken cancellationToken = default) =>
         await dbContext.Permissions.AddAsync(permission, cancellationToken);
 
+    public async Task<IReadOnlyList<Permission>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
+        await dbContext.Permissions.Where(p => ids.Contains(p.Id)).ToListAsync(cancellationToken);
+
+    public Task Remove(Permission permission, CancellationToken cancellationToken = default)
+    {
+        dbContext.Permissions.Remove(permission);
+        return Task.CompletedTask;
+    }
+
     public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default) =>
         await dbContext.Permissions.AnyAsync(p => p.Name == name, cancellationToken);
 

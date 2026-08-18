@@ -13,5 +13,6 @@ public interface IRoleRepository
     Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
     Task<bool> HasUsersAsync(Guid roleId, CancellationToken cancellationToken = default);
     Task<Role?> GetWithPermissionsAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Role>> GetAllWithPermissionsAsync(CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

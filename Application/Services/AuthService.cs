@@ -89,14 +89,13 @@ public class AuthService(
         authCookieService.ClearTokenCookies();
     }
 
-    public async Task<UserResponse> CreateUserByAdminAsync(CreateUserRequest request, User currentUser)
+    public async Task<UserResponse> CreateUserByAdminAsync(CreateUserRequest request)
     {
-        var allowedRoles = new[] { SystemRoles.Admin, SystemRoles.Operator };
-        if (!allowedRoles.Contains(currentUser.Role.Name))
-            throw new UnauthorizedAccessException("Only Admin and Operator roles can create users.");
-
         var targetRole = await roleRepository.GetByIdAsync(request.RoleId)
             ?? throw new RoleNotFoundException($"Role with id '{request.RoleId}' was not found.");
+
+        if (targetRole.Name == SystemRoles.Admin)
+            throw new CannotAssignAdminRoleException("New Admin users cannot be created. Assign a different role.");
 
         var email = NormalizeEmail(request.Email);
 
@@ -126,7 +125,7 @@ public class AuthService(
 
         authCookieService.SetTokenCookies(token.Token, token.ExpiresAt, refreshTokenValue);
 
-        return user.ToResponse();
+        return user.ToResponse(permissions.ToList());
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();

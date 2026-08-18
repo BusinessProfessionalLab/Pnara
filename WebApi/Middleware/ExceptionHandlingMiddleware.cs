@@ -27,9 +27,12 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             RoleNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
             RoleAlreadyExistsException => (StatusCodes.Status409Conflict, exception.Message),
             SystemRoleCannotBeDeletedException => (StatusCodes.Status400BadRequest, exception.Message),
+            SystemRoleCannotBeModifiedException => (StatusCodes.Status400BadRequest, exception.Message),
+            CannotAssignAdminRoleException => (StatusCodes.Status403Forbidden, exception.Message),
             RoleInUseException => (StatusCodes.Status400BadRequest, exception.Message),
             PermissionNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
             PermissionAlreadyExistsException => (StatusCodes.Status409Conflict, exception.Message),
+            SystemPermissionCannotBeDeletedException => (StatusCodes.Status400BadRequest, exception.Message),
             DomainException => (StatusCodes.Status400BadRequest, exception.Message),
             UnauthorizedAccessException => (StatusCodes.Status403Forbidden, exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")

@@ -1,3 +1,4 @@
+using Domain.Constants;
 using Domain.Exceptions;
 
 namespace Domain.Entities;
@@ -48,6 +49,14 @@ public class Role
 
         Name = name.Trim();
         Description = description;
+    }
+
+    public void MarkAsCustomRole()
+    {
+        if (Name == SystemRoles.Admin)
+            throw new DomainException("The Admin role cannot be converted to a custom role.");
+
+        IsSystemRole = false;
     }
 
     public void AssignPermission(Permission permission)

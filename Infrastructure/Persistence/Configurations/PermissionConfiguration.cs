@@ -15,5 +15,9 @@ public class PermissionConfiguration : IEntityTypeConfiguration<Permission>
         builder.HasIndex(p => p.Name).IsUnique();
 
         builder.Property(p => p.Description).HasMaxLength(500);
+
+        builder.Property(p => p.Group).HasMaxLength(100);
+
+        builder.Property(p => p.IsSystemPermission).IsRequired();
     }
 }
