@@ -1,3 +1,3 @@
 namespace Application.DTOs;
 
-public record PermissionDto(Guid Id, string Name, string? Description);
+public record PermissionDto(Guid Id, string Name, string? Description, string? Group, bool IsSystemPermission);

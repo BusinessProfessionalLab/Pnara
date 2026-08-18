@@ -1,7 +1,6 @@
 using Application.Common;
 using Application.DTOs;
 using Application.Services;
-using Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,7 +40,6 @@ public class RolesController(RoleService roleService) : ControllerBase
     }
 
     [HttpPut("{roleId:guid}/permissions")]
-    [Authorize(Policy = "RolesManage")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> AssignPermissions(Guid roleId, AssignPermissionsRequest request)
     {
@@ -54,7 +52,6 @@ public class RolesController(RoleService roleService) : ControllerBase
     }
 
     [HttpDelete("{roleId:guid}/permissions/{permissionId:guid}")]
-    [Authorize(Policy = "RolesManage")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> RevokePermission(Guid roleId, Guid permissionId)
     {
@@ -67,7 +64,6 @@ public class RolesController(RoleService roleService) : ControllerBase
     }
 
     [HttpGet("{roleId:guid}/permissions")]
-    [Authorize(Policy = "RolesManage")]
     [ProducesResponseType(typeof(IReadOnlyList<PermissionDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetRolePermissions(Guid roleId)
     {

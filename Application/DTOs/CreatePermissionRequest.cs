@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Application.DTOs;
 
-public record CreateRoleRequest(
+public record CreatePermissionRequest(
     [Required] string Name,
     string? Description,
-    IReadOnlyList<Guid>? PermissionIds = null);
+    string? Group);

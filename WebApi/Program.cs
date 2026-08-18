@@ -6,8 +6,10 @@ using Infrastructure;
 using Infrastructure.Auth;
 using Infrastructure.Seeding;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using WebApi.Authorization;
 using WebApi.Middleware;
 using WebApi.Services;
 
@@ -20,6 +22,7 @@ builder.Services.AddScoped<IAuthCookieService, AuthCookieService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<PermissionService>();
 builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<ModifierGroupService>();
@@ -67,9 +70,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("AdminOnly", policy => policy.RequireClaim("role", SystemRoles.Admin))
-    .AddPolicy("AdminOrOperator", policy => policy.RequireClaim("role", SystemRoles.Admin, SystemRoles.Operator))
-    .AddPolicy("RolesManage", policy => policy.RequireClaim("permission", "roles.manage"));
+    .AddPolicy("AdminOnly", policy => policy.RequireClaim("role", SystemRoles.Admin));
+
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 
 builder.Services.AddSwaggerGen(options =>
 {

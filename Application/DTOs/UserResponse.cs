@@ -8,4 +8,5 @@ public record UserResponse(
     Guid RoleId,
     string RoleName,
     bool IsActive,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    IReadOnlyList<string> Permissions);

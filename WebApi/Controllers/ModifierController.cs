@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers;
 
 [ApiController]
-[Authorize(Policy = "AdminOrOperator")]
+[Authorize(Policy = "perm:manage")]
 [Route("api/modifier-groups")]
 public class ModifierController(ModifierGroupService modifierGroupService) : ControllerBase
 {

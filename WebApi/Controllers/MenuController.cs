@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace WebApi.Controllers;
 
 [ApiController]
-[Authorize(Policy = "AdminOrOperator")]
+[Authorize(Policy = "perm:manage")]
 [Route("api/menu")]
 public class MenuController(MenuGroupService menuGroupService, MenuItemService menuItemService) : ControllerBase
 {
@@ -24,7 +24,6 @@ public class MenuController(MenuGroupService menuGroupService, MenuItemService m
         Ok(await menuGroupService.UpdateAsync(id, request));
 
     [HttpPatch("groups/{id:guid}/status")]
-    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetGroupStatus(Guid id, ToggleStatusRequest request)
     {
@@ -63,7 +62,6 @@ public class MenuController(MenuGroupService menuGroupService, MenuItemService m
         Ok(await menuItemService.UpdateAsync(id, request));
 
     [HttpPatch("items/{id:guid}/status")]
-    [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> SetItemStatus(Guid id, ToggleStatusRequest request)
     {

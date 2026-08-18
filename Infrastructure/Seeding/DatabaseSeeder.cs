@@ -20,27 +20,66 @@ public static class DatabaseSeeder
 
         await dbContext.Database.MigrateAsync();
 
+        await SeedPermissionsAsync(dbContext);
         await SeedRolesAsync(dbContext);
         await SeedDefaultAdminAsync(dbContext, configuration, passwordHasher);
         await SeedCompanyInfoAsync(dbContext);
     }
 
+    private static async Task SeedPermissionsAsync(AppDbContext dbContext)
+    {
+        var catalogNames = SystemPermissions.Catalog.Select(p => p.Name).ToHashSet();
+
+        var stalePermissions = await dbContext.Permissions
+            .Where(p => p.IsSystemPermission && !catalogNames.Contains(p.Name))
+            .ToListAsync();
+
+        dbContext.Permissions.RemoveRange(stalePermissions);
+
+        var permissionsByName = (await dbContext.Permissions.ToListAsync()).ToDictionary(p => p.Name);
+
+        foreach (var seed in SystemPermissions.Catalog)
+        {
+            if (permissionsByName.TryGetValue(seed.Name, out var permission))
+            {
+                permission.UpdateDetails(seed.Description, seed.Group);
+            }
+            else
+            {
+                permission = Permission.Create(seed.Name, seed.Description, seed.Group, isSystemPermission: true);
+                await dbContext.Permissions.AddAsync(permission);
+                permissionsByName[seed.Name] = permission;
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+    }
+
     private static async Task SeedRolesAsync(AppDbContext dbContext)
     {
-        var systemRoles = new[]
-        {
-            (SystemRoles.Admin, "Full system administrator"),
-            (SystemRoles.Operator, "Can manage menu and users"),
-            (SystemRoles.User, "Regular customer")
-        };
+        var adminRole = await dbContext.Roles
+            .Include(r => r.RolePermissions)
+            .FirstOrDefaultAsync(role => role.Name == SystemRoles.Admin);
 
-        foreach (var (name, description) in systemRoles)
+        if (adminRole is null)
         {
-            if (!await dbContext.Roles.AnyAsync(role => role.Name == name))
-            {
-                var role = Role.Create(name, description, isSystemRole: true);
-                await dbContext.Roles.AddAsync(role);
-            }
+            adminRole = Role.Create(SystemRoles.Admin, "Full system administrator with all permissions", isSystemRole: true);
+            await dbContext.Roles.AddAsync(adminRole);
+        }
+
+        foreach (var legacyRoleName in new[] { SystemRoles.Operator, SystemRoles.User })
+        {
+            var legacyRole = await dbContext.Roles.FirstOrDefaultAsync(role => role.Name == legacyRoleName);
+
+            if (legacyRole is not null && legacyRole.IsSystemRole)
+                legacyRole.MarkAsCustomRole();
+        }
+
+        var allPermissions = await dbContext.Permissions.ToListAsync();
+        foreach (var permission in allPermissions)
+        {
+            if (adminRole.RolePermissions.All(rp => rp.PermissionId != permission.Id))
+                adminRole.AssignPermission(permission);
         }
 
         await dbContext.SaveChangesAsync();
