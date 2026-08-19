@@ -14,4 +14,15 @@ public class CompanyInfoService(ICompanyInfoRepository companyInfoRepository)
 
         return companyInfo.ToResponse();
     }
+
+    public async Task<CompanyInfoResponse> UpdateTaxSettingsAsync(UpdateTaxSettingsRequest request)
+    {
+        var companyInfo = await companyInfoRepository.GetAsync()
+            ?? throw new NotFoundException("Company information was not found.");
+
+        companyInfo.UpdateTaxSettings(request.TaxEnabled, request.TaxRate);
+
+        await companyInfoRepository.SaveChangesAsync();
+        return companyInfo.ToResponse();
+    }
 }

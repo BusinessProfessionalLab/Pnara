@@ -13,5 +13,8 @@ public class CompanyInfoConfiguration : IEntityTypeConfiguration<CompanyInfo>
 
         builder.Property(ci => ci.Name).HasMaxLength(200).IsRequired();
         builder.Property(ci => ci.LogoUrl).HasMaxLength(500).IsRequired();
+        builder.Property(ci => ci.TaxEnabled).IsRequired();
+        builder.Property(ci => ci.TaxRate).HasPrecision(5, 2).IsRequired();
+        builder.Property(ci => ci.InstallationDate).IsRequired();
     }
 }

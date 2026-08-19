@@ -1,7 +1,9 @@
 using System.Text;
+using Application.Common;
 using Application.Interfaces;
 using Application.Services;
 using Domain.Constants;
+using Domain.Repositories;
 using Infrastructure;
 using Infrastructure.Auth;
 using Infrastructure.Seeding;
@@ -27,6 +29,16 @@ builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<ModifierGroupService>();
 builder.Services.AddScoped<CompanyInfoService>();
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<InvoiceService>();
+builder.Services.AddScoped<UserAddressService>();
+builder.Services.AddScoped<ILicenseService>(sp =>
+{
+    var licenseSettings = builder.Configuration.GetSection("License").Get<LicenseSettings>()
+        ?? new LicenseSettings();
+    var companyInfoRepo = sp.GetRequiredService<ICompanyInfoRepository>();
+    return new LicenseService(companyInfoRepo, licenseSettings);
+});
 
 builder.Services.AddCors(options =>
 {
