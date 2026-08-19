@@ -12,4 +12,7 @@
   <Folder Name="/src/03-Infrastructure/">
     <Project Path="Infrastructure/Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="Domain.Tests/Domain.Tests.csproj" />
+  </Folder>
 </Solution>

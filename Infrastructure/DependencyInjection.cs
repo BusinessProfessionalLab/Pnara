@@ -1,6 +1,7 @@
 using Application.Interfaces;
 using Domain.Repositories;
 using Infrastructure.Auth;
+using Infrastructure.Common;
 using Infrastructure.Persistence;
 using Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,12 @@ public static class DependencyInjection
         services.AddScoped<IMenuItemRepository, MenuItemRepository>();
         services.AddScoped<IModifierGroupRepository, ModifierGroupRepository>();
         services.AddScoped<ICompanyInfoRepository, CompanyInfoRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+        services.AddScoped<IUserAddressRepository, UserAddressRepository>();
+        services.AddScoped<IOrderNumberGenerator, OrderNumberGenerator>();
+        services.AddScoped<IInvoiceNumberGenerator, InvoiceNumberGenerator>();
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();

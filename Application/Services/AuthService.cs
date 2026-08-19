@@ -15,10 +15,13 @@ public class AuthService(
     IRefreshTokenRepository refreshTokenRepository,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
-    IAuthCookieService authCookieService)
+    IAuthCookieService authCookieService,
+    ILicenseService licenseService)
 {
     public async Task<UserResponse> RegisterAsync(RegisterRequest request)
     {
+        await licenseService.ValidateTrialAsync();
+
         var email = NormalizeEmail(request.Email);
 
         if (await userRepository.ExistsByEmailAsync(email))
@@ -38,6 +41,8 @@ public class AuthService(
 
     public async Task<UserResponse> LoginAsync(LoginRequest request)
     {
+        await licenseService.ValidateTrialAsync();
+
         var email = NormalizeEmail(request.Email);
 
         var user = await userRepository.GetByEmailAsync(email);
@@ -50,6 +55,8 @@ public class AuthService(
 
     public async Task<UserResponse> RefreshTokenAsync()
     {
+        await licenseService.ValidateTrialAsync();
+
         var refreshToken = authCookieService.GetRefreshToken()
             ?? throw new InvalidCredentialsException();
 

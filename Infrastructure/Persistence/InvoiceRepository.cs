@@ -1,0 +1,37 @@
+using Domain.Entities;
+using Domain.Enums;
+using Domain.Repositories;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Persistence;
+
+public class InvoiceRepository(AppDbContext dbContext) : IInvoiceRepository
+{
+    public async Task<Invoice?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await dbContext.Invoices
+            .Include(invoice => invoice.Order)
+            .ThenInclude(order => order.Items)
+            .FirstOrDefaultAsync(invoice => invoice.Id == id, cancellationToken);
+
+    public async Task<Invoice?> GetByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default) =>
+        await dbContext.Invoices
+            .Include(invoice => invoice.Order)
+            .ThenInclude(order => order.Items)
+            .FirstOrDefaultAsync(invoice => invoice.OrderId == orderId, cancellationToken);
+
+    public async Task<IReadOnlyList<Invoice>> GetListAsync(DateTime? fromUtc = null, DateTime? toUtc = null, PaymentStatus? status = null, CancellationToken cancellationToken = default) =>
+        await dbContext.Invoices
+            .Include(invoice => invoice.Order)
+            .Where(invoice =>
+                (fromUtc == null || invoice.IssuedAtUtc >= fromUtc) &&
+                (toUtc == null || invoice.IssuedAtUtc < toUtc) &&
+                (status == null || invoice.PaymentStatus == status))
+            .OrderByDescending(invoice => invoice.IssuedAtUtc)
+            .ToListAsync(cancellationToken);
+
+    public async Task AddAsync(Invoice invoice, CancellationToken cancellationToken = default) =>
+        await dbContext.Invoices.AddAsync(invoice, cancellationToken);
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        await dbContext.SaveChangesAsync(cancellationToken);
+}

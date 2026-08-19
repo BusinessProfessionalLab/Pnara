@@ -121,7 +121,7 @@ public static class DatabaseSeeder
         if (await dbContext.CompanyInfos.AnyAsync())
             return;
 
-        var companyInfo = CompanyInfo.Create("Pinara Restaurant", "/uploads/default/logo.png");
+        var companyInfo = CompanyInfo.Create("Pinara Restaurant", "/uploads/default/logo.png", taxEnabled: false, taxRate: 0m);
         await dbContext.CompanyInfos.AddAsync(companyInfo);
         await dbContext.SaveChangesAsync();
     }

@@ -1,5 +1,6 @@
 using Application.Exceptions;
 using Domain.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace WebApi.Middleware;
 
@@ -33,7 +34,9 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             PermissionNotFoundException => (StatusCodes.Status404NotFound, exception.Message),
             PermissionAlreadyExistsException => (StatusCodes.Status409Conflict, exception.Message),
             SystemPermissionCannotBeDeletedException => (StatusCodes.Status400BadRequest, exception.Message),
+            TrialExpiredException => (StatusCodes.Status403Forbidden, exception.Message),
             DomainException => (StatusCodes.Status400BadRequest, exception.Message),
+            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "The record was modified by another user. Please refresh and try again."),
             UnauthorizedAccessException => (StatusCodes.Status403Forbidden, exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
         };

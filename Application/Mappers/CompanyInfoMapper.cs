@@ -6,5 +6,5 @@ namespace Application.Mappers;
 public static class CompanyInfoMapper
 {
     public static CompanyInfoResponse ToResponse(this CompanyInfo companyInfo) =>
-        new(companyInfo.Name, companyInfo.LogoUrl);
+        new(companyInfo.Name, companyInfo.LogoUrl, companyInfo.TaxEnabled, companyInfo.TaxRate);
 }
