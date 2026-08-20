@@ -63,58 +63,292 @@ namespace Infrastructure.Migrations
                     b.ToTable("CompanyInfos", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Ingredient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("CurrentStock")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("MeasurementUnitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("MinimumStock")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MeasurementUnitId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Ingredients", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Invoice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("CancelledAtUtc")
+                    b.Property<int>("Channel")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("FinalizedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("CancelledByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<long>("InvoiceNumber")
-                        .HasColumnType("bigint");
+                    b.Property<string>("InvoiceNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("IssuedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("IssuedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("PaidAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("PaidByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("PaymentStatus")
-                        .HasMaxLength(20)
+                    b.Property<int?>("PaymentMethod")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("TaxRate")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("InvoiceNumber")
                         .IsUnique();
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("Status", "FinalizedAtUtc");
 
                     b.ToTable("Invoices", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.InvoiceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("MenuItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("InvoiceItems", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.InvoiceItemAddon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AddonName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("InvoiceItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("LineTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("MenuAddonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InvoiceItemId");
+
+                    b.HasIndex("MenuAddonId");
+
+                    b.ToTable("InvoiceItemAddons", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MeasurementUnit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("Symbol")
+                        .IsUnique();
+
+                    b.ToTable("MeasurementUnits", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuAddon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Price")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("MenuAddons", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuAddonMenuItem", b =>
+                {
+                    b.Property<Guid>("MenuAddonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MenuItemId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("MenuAddonId", "MenuItemId");
+
+                    b.HasIndex("MenuItemId");
+
+                    b.ToTable("MenuAddonMenuItems", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuAddonRecipe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MenuAddonId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MenuAddonId")
+                        .IsUnique();
+
+                    b.ToTable("MenuAddonRecipes", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuAddonRecipeComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IngredientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<Guid>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngredientId");
+
+                    b.HasIndex("RecipeId", "IngredientId")
+                        .IsUnique();
+
+                    b.ToTable("MenuAddonRecipeComponents", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.MenuGroup", b =>
@@ -178,222 +412,154 @@ namespace Infrastructure.Migrations
                     b.ToTable("MenuItems", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.Modifier", b =>
+            modelBuilder.Entity("Domain.Entities.MenuItemRecipe", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("ModifierGroupId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<decimal>("Price")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ModifierGroupId");
-
-                    b.ToTable("Modifiers", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.ModifierGroup", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsRequired")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MaxSelection")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("MinSelection")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("SelectionType")
-                        .HasMaxLength(50)
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ModifierGroups", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.ModifierGroupMenuItem", b =>
-                {
-                    b.Property<Guid>("ModifierGroupId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("MenuItemId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("ModifierGroupId", "MenuItemId");
-
-                    b.HasIndex("MenuItemId");
-
-                    b.ToTable("ModifierGroupMenuItems", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.Order", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Channel")
-                        .HasMaxLength(20)
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CustomerName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("CustomerPhoneNumber")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("DeliveryAddressLine")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("DeliveryAddressTitle")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("DeliveryCity")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("DeliveryPhoneNumber")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("DeliveryPostalCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<long>("OrderNumber")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("RegisteredAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RejectionReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("ReviewedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("ReviewedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Status")
-                        .HasMaxLength(30)
-                        .HasColumnType("integer");
-
-                    b.Property<string>("TableNumber")
-                        .HasColumnType("text");
-
-                    b.Property<uint>("xmin")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderNumber")
+                    b.HasIndex("MenuItemId")
                         .IsUnique();
 
-                    b.ToTable("Orders", (string)null);
+                    b.ToTable("MenuItemRecipes", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.OrderItem", b =>
+            modelBuilder.Entity("Domain.Entities.PrinterDefinition", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("AddedAtUtc")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<int>("ConnectionType")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("MenuItemId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ProductName")
+                    b.Property<string>("Host")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MenuItemId");
-
-                    b.HasIndex("OrderId");
-
-                    b.ToTable("OrderItems", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.Permission", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<string>("Group")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("IsSystemPermission")
+                    b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("PaperWidth")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Port")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Permissions", (string)null);
+                    b.ToTable("PrinterDefinitions", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.ReceiptPrinterMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PrinterDefinitionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ReceiptType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PrinterDefinitionId");
+
+                    b.HasIndex("ReceiptType")
+                        .IsUnique();
+
+                    b.ToTable("ReceiptPrinterMappings", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.ReceiptTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FontSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FooterText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("HeaderText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ReceiptType")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("ShowChannel")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowDiscount")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowLogo")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowPaymentMethod")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowPrices")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowTax")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiptType")
+                        .IsUnique();
+
+                    b.ToTable("ReceiptTemplates", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.RecipeComponent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("IngredientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<Guid>("RecipeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngredientId");
+
+                    b.HasIndex("RecipeId", "IngredientId")
+                        .IsUnique();
+
+                    b.ToTable("RecipeComponents", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.RefreshToken", b =>
@@ -458,19 +624,45 @@ namespace Infrastructure.Migrations
                     b.ToTable("Roles", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.RolePermission", b =>
+            modelBuilder.Entity("Domain.Entities.StockLedgerEntry", b =>
                 {
-                    b.Property<Guid>("RoleId")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("PermissionId")
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<Guid>("IngredientId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("RoleId", "PermissionId");
+                    b.Property<Guid?>("InvoiceId")
+                        .HasColumnType("uuid");
 
-                    b.HasIndex("PermissionId");
+                    b.Property<int>("MovementType")
+                        .HasColumnType("integer");
 
-                    b.ToTable("RolePermissions", (string)null);
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("QuantityChange")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngredientId", "OccurredAtUtc");
+
+                    b.HasIndex("InvoiceId", "IngredientId", "MovementType")
+                        .IsUnique()
+                        .HasFilter("\"InvoiceId\" IS NOT NULL");
+
+                    b.ToTable("StockLedgerEntries", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
@@ -518,247 +710,125 @@ namespace Infrastructure.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.UserAddress", b =>
+            modelBuilder.Entity("Domain.Entities.Ingredient", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("AddressLine")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("PostalCode")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserAddresses", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.Invoice", b =>
-                {
-                    b.HasOne("Domain.Entities.Order", "Order")
+                    b.HasOne("Domain.Entities.MeasurementUnit", null)
                         .WithMany()
-                        .HasForeignKey("OrderId")
+                        .HasForeignKey("MeasurementUnitId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.OwnsOne("Domain.ValueObjects.Money", "Discount", b1 =>
-                        {
-                            b1.Property<Guid>("InvoiceId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<decimal>("Amount")
-                                .HasPrecision(18, 2)
-                                .HasColumnType("numeric(18,2)")
-                                .HasColumnName("Discount");
-
-                            b1.Property<string>("Currency")
-                                .IsRequired()
-                                .HasMaxLength(3)
-                                .HasColumnType("character varying(3)")
-                                .HasColumnName("DiscountCurrency");
-
-                            b1.HasKey("InvoiceId");
-
-                            b1.ToTable("Invoices");
-
-                            b1.WithOwner()
-                                .HasForeignKey("InvoiceId");
-                        });
-
-                    b.OwnsOne("Domain.ValueObjects.Money", "GrandTotal", b1 =>
-                        {
-                            b1.Property<Guid>("InvoiceId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<decimal>("Amount")
-                                .HasPrecision(18, 2)
-                                .HasColumnType("numeric(18,2)")
-                                .HasColumnName("GrandTotal");
-
-                            b1.Property<string>("Currency")
-                                .IsRequired()
-                                .HasMaxLength(3)
-                                .HasColumnType("character varying(3)")
-                                .HasColumnName("GrandTotalCurrency");
-
-                            b1.HasKey("InvoiceId");
-
-                            b1.ToTable("Invoices");
-
-                            b1.WithOwner()
-                                .HasForeignKey("InvoiceId");
-                        });
-
-                    b.OwnsOne("Domain.ValueObjects.Money", "SubTotal", b1 =>
-                        {
-                            b1.Property<Guid>("InvoiceId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<decimal>("Amount")
-                                .HasPrecision(18, 2)
-                                .HasColumnType("numeric(18,2)")
-                                .HasColumnName("SubTotal");
-
-                            b1.Property<string>("Currency")
-                                .IsRequired()
-                                .HasMaxLength(3)
-                                .HasColumnType("character varying(3)")
-                                .HasColumnName("SubTotalCurrency");
-
-                            b1.HasKey("InvoiceId");
-
-                            b1.ToTable("Invoices");
-
-                            b1.WithOwner()
-                                .HasForeignKey("InvoiceId");
-                        });
-
-                    b.OwnsOne("Domain.ValueObjects.Money", "Tax", b1 =>
-                        {
-                            b1.Property<Guid>("InvoiceId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<decimal>("Amount")
-                                .HasPrecision(18, 2)
-                                .HasColumnType("numeric(18,2)")
-                                .HasColumnName("Tax");
-
-                            b1.Property<string>("Currency")
-                                .IsRequired()
-                                .HasMaxLength(3)
-                                .HasColumnType("character varying(3)")
-                                .HasColumnName("TaxCurrency");
-
-                            b1.HasKey("InvoiceId");
-
-                            b1.ToTable("Invoices");
-
-                            b1.WithOwner()
-                                .HasForeignKey("InvoiceId");
-                        });
-
-                    b.Navigation("Discount")
-                        .IsRequired();
-
-                    b.Navigation("GrandTotal")
-                        .IsRequired();
-
-                    b.Navigation("Order");
-
-                    b.Navigation("SubTotal")
-                        .IsRequired();
-
-                    b.Navigation("Tax")
-                        .IsRequired();
                 });
 
-            modelBuilder.Entity("Domain.Entities.Modifier", b =>
+            modelBuilder.Entity("Domain.Entities.InvoiceItem", b =>
                 {
-                    b.HasOne("Domain.Entities.ModifierGroup", null)
-                        .WithMany("Modifiers")
-                        .HasForeignKey("ModifierGroupId")
+                    b.HasOne("Domain.Entities.Invoice", null)
+                        .WithMany("Items")
+                        .HasForeignKey("InvoiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Domain.Entities.ModifierGroupMenuItem", b =>
+            modelBuilder.Entity("Domain.Entities.InvoiceItemAddon", b =>
                 {
+                    b.HasOne("Domain.Entities.InvoiceItem", null)
+                        .WithMany("Addons")
+                        .HasForeignKey("InvoiceItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.MenuAddon", null)
+                        .WithMany()
+                        .HasForeignKey("MenuAddonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuAddonMenuItem", b =>
+                {
+                    b.HasOne("Domain.Entities.MenuAddon", null)
+                        .WithMany()
+                        .HasForeignKey("MenuAddonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Domain.Entities.MenuItem", null)
                         .WithMany()
                         .HasForeignKey("MenuItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
 
-                    b.HasOne("Domain.Entities.ModifierGroup", null)
-                        .WithMany()
-                        .HasForeignKey("ModifierGroupId")
+            modelBuilder.Entity("Domain.Entities.MenuAddonRecipe", b =>
+                {
+                    b.HasOne("Domain.Entities.MenuAddon", null)
+                        .WithOne()
+                        .HasForeignKey("Domain.Entities.MenuAddonRecipe", "MenuAddonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Domain.Entities.OrderItem", b =>
+            modelBuilder.Entity("Domain.Entities.MenuAddonRecipeComponent", b =>
                 {
-                    b.HasOne("Domain.Entities.Order", null)
-                        .WithMany("Items")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("Domain.Entities.Ingredient", null)
+                        .WithMany()
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.OwnsOne("Domain.ValueObjects.Money", "UnitPrice", b1 =>
-                        {
-                            b1.Property<Guid>("OrderItemId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<decimal>("Amount")
-                                .HasPrecision(18, 2)
-                                .HasColumnType("numeric(18,2)")
-                                .HasColumnName("UnitPrice");
-
-                            b1.Property<string>("Currency")
-                                .IsRequired()
-                                .HasMaxLength(3)
-                                .HasColumnType("character varying(3)")
-                                .HasColumnName("UnitPriceCurrency");
-
-                            b1.HasKey("OrderItemId");
-
-                            b1.ToTable("OrderItems");
-
-                            b1.WithOwner()
-                                .HasForeignKey("OrderItemId");
-                        });
-
-                    b.Navigation("UnitPrice")
+                    b.HasOne("Domain.Entities.MenuAddonRecipe", null)
+                        .WithMany("Components")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Domain.Entities.RolePermission", b =>
+            modelBuilder.Entity("Domain.Entities.MenuItemRecipe", b =>
                 {
-                    b.HasOne("Domain.Entities.Permission", "Permission")
+                    b.HasOne("Domain.Entities.MenuItem", null)
+                        .WithOne()
+                        .HasForeignKey("Domain.Entities.MenuItemRecipe", "MenuItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Domain.Entities.ReceiptPrinterMapping", b =>
+                {
+                    b.HasOne("Domain.Entities.PrinterDefinition", "PrinterDefinition")
                         .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("PrinterDefinitionId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Domain.Entities.Role", "Role")
-                        .WithMany("RolePermissions")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.Navigation("PrinterDefinition");
+                });
+
+            modelBuilder.Entity("Domain.Entities.RecipeComponent", b =>
+                {
+                    b.HasOne("Domain.Entities.Ingredient", null)
+                        .WithMany()
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Permission");
+                    b.HasOne("Domain.Entities.MenuItemRecipe", null)
+                        .WithMany("Components")
+                        .HasForeignKey("RecipeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 
-                    b.Navigation("Role");
+            modelBuilder.Entity("Domain.Entities.StockLedgerEntry", b =>
+                {
+                    b.HasOne("Domain.Entities.Ingredient", null)
+                        .WithMany()
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Domain.Entities.User", b =>
@@ -772,28 +842,24 @@ namespace Infrastructure.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("Domain.Entities.UserAddress", b =>
-                {
-                    b.HasOne("Domain.Entities.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Domain.Entities.ModifierGroup", b =>
-                {
-                    b.Navigation("Modifiers");
-                });
-
-            modelBuilder.Entity("Domain.Entities.Order", b =>
+            modelBuilder.Entity("Domain.Entities.Invoice", b =>
                 {
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Role", b =>
+            modelBuilder.Entity("Domain.Entities.InvoiceItem", b =>
                 {
-                    b.Navigation("RolePermissions");
+                    b.Navigation("Addons");
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuAddonRecipe", b =>
+                {
+                    b.Navigation("Components");
+                });
+
+            modelBuilder.Entity("Domain.Entities.MenuItemRecipe", b =>
+                {
+                    b.Navigation("Components");
                 });
 #pragma warning restore 612, 618
         }

@@ -6,7 +6,10 @@ using Domain.Repositories;
 
 namespace Application.Services;
 
-public class MenuGroupService(IMenuGroupRepository menuGroupRepository, IMenuItemRepository menuItemRepository)
+public class MenuGroupService(
+    IMenuGroupRepository menuGroupRepository,
+    IMenuItemRepository menuItemRepository,
+    IMenuAddonRepository menuAddonRepository)
 {
     public async Task<MenuGroupResponse> CreateAsync(CreateMenuGroupRequest request)
     {
@@ -83,11 +86,28 @@ public class MenuGroupService(IMenuGroupRepository menuGroupRepository, IMenuIte
         foreach (var group in activeGroups)
         {
             var items = await menuItemRepository.GetByGroupAsync(group.Id);
-            var availableItems = items
-                .Where(item => item.IsAvailable)
-                .Select(item => new PublicMenuItemDto(
-                    item.Id, item.Name, item.Description, item.Price, item.ImageUrl, item.DisplayOrder))
-                .ToList();
+            var availableItems = new List<PublicMenuItemDto>();
+            foreach (var item in items.Where(item => item.IsAvailable))
+            {
+                var addons = await menuAddonRepository.GetAllAsync(
+                    includeUnavailable: false,
+                    menuItemId: item.Id);
+                availableItems.Add(new PublicMenuItemDto(
+                    item.Id,
+                    item.Name,
+                    item.Description,
+                    item.Price,
+                    item.ImageUrl,
+                    item.DisplayOrder,
+                    addons
+                        .Select(addon => new PublicMenuAddonDto(
+                            addon.Id,
+                            addon.Name,
+                            addon.Description,
+                            addon.Price,
+                            addon.DisplayOrder))
+                        .ToList()));
+            }
 
             publicGroups.Add(new PublicMenuGroupDto(
                 group.Id, group.Name, group.DisplayOrder, availableItems));

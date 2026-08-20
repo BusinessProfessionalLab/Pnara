@@ -27,18 +27,12 @@ builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
-builder.Services.AddScoped<ModifierGroupService>();
+builder.Services.AddScoped<MenuAddonService>();
 builder.Services.AddScoped<CompanyInfoService>();
-builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<SalesReportService>();
 builder.Services.AddScoped<InvoiceService>();
-builder.Services.AddScoped<UserAddressService>();
-builder.Services.AddScoped<ILicenseService>(sp =>
-{
-    var licenseSettings = builder.Configuration.GetSection("License").Get<LicenseSettings>()
-        ?? new LicenseSettings();
-    var companyInfoRepo = sp.GetRequiredService<ICompanyInfoRepository>();
-    return new LicenseService(companyInfoRepo, licenseSettings);
-});
+builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<ReceiptPrintingService>();
 
 builder.Services.AddCors(options =>
 {

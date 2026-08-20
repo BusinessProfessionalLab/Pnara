@@ -8,24 +8,20 @@ namespace Domain.Entities;
 
 public class Invoice
 {
-    private readonly List<IDomainEvent> _domainEvents = [];
+    private readonly List<InvoiceItem> _items = [];
 
     public Guid Id { get; private set; }
-    public long InvoiceNumber { get; private set; }
-    public Guid OrderId { get; private set; }
-    public Order Order { get; private set; } = null!;
-    public Guid IssuedByUserId { get; private set; }
+    public string InvoiceNumber { get; private set; } = null!;
+    public SalesChannel Channel { get; private set; }
+    public InvoiceStatus Status { get; private set; }
+    public PaymentMethod? PaymentMethod { get; private set; }
+    public decimal Subtotal { get; private set; }
+    public decimal DiscountAmount { get; private set; }
+    public decimal TaxAmount { get; private set; }
+    public decimal TotalAmount { get; private set; }
     public DateTime IssuedAtUtc { get; private set; }
-    public decimal TaxRate { get; private set; }
-    public Money SubTotal { get; private set; } = null!;
-    public Money Discount { get; private set; } = null!;
-    public Money Tax { get; private set; } = null!;
-    public Money GrandTotal { get; private set; } = null!;
-    public PaymentStatus PaymentStatus { get; private set; }
-    public DateTime? PaidAtUtc { get; private set; }
-    public Guid? PaidByUserId { get; private set; }
-    public DateTime? CancelledAtUtc { get; private set; }
-    public Guid? CancelledByUserId { get; private set; }
+    public DateTime? FinalizedAtUtc { get; private set; }
+    public IReadOnlyCollection<InvoiceItem> Items => _items.AsReadOnly();
 
     public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
@@ -33,101 +29,99 @@ public class Invoice
     {
     }
 
-    public static Invoice CreateDraft(Order order, long invoiceNumber, Guid createdByUserId, string currency = "IRR")
+    private Invoice(
+        string invoiceNumber,
+        SalesChannel channel,
+        decimal discountAmount,
+        decimal taxAmount,
+        DateTime issuedAtUtc)
     {
-        if (order is null)
-            throw new DomainException("Invoice requires an order.");
+        Id = Guid.NewGuid();
+        InvoiceNumber = invoiceNumber;
+        Channel = channel;
+        Status = InvoiceStatus.Draft;
+        DiscountAmount = discountAmount;
+        TaxAmount = taxAmount;
+        IssuedAtUtc = issuedAtUtc;
+    }
 
-        if (invoiceNumber <= 0)
-            throw new DomainException("Invoice number must be positive.");
+    public static Invoice Create(
+        string invoiceNumber,
+        SalesChannel channel,
+        decimal discountAmount = 0,
+        decimal taxAmount = 0,
+        DateTime? issuedAtUtc = null)
+    {
+        if (string.IsNullOrWhiteSpace(invoiceNumber))
+            throw new DomainException("Invoice number cannot be empty.");
 
-        if (createdByUserId == Guid.Empty)
-            throw new DomainException("Invoice must be created by a valid user.");
+        if (discountAmount < 0)
+            throw new DomainException("Invoice discount cannot be negative.");
 
-        return new Invoice
+        if (taxAmount < 0)
+            throw new DomainException("Invoice tax cannot be negative.");
+
+        if (!Enum.IsDefined(channel))
+            throw new DomainException("Invoice channel is invalid.");
+
+        return new Invoice(
+            invoiceNumber.Trim(),
+            channel,
+            discountAmount,
+            taxAmount,
+            NormalizeUtc(issuedAtUtc ?? DateTime.UtcNow));
+    }
+
+    public void AddItem(InvoiceItem item)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can be changed.");
+
+        ArgumentNullException.ThrowIfNull(item);
+        item.AssignToInvoice(Id);
+        _items.Add(item);
+        RecalculateTotals();
+    }
+
+    public void Finalize(PaymentMethod paymentMethod, DateTime? finalizedAtUtc = null)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can be finalized.");
+
+        if (_items.Count == 0)
+            throw new DomainException("An invoice must contain at least one item.");
+
+        if (DiscountAmount > Subtotal)
+            throw new DomainException("Invoice discount cannot exceed the subtotal.");
+
+        if (!Enum.IsDefined(paymentMethod))
+            throw new DomainException("Invoice payment method is invalid.");
+
+        PaymentMethod = paymentMethod;
+        Status = InvoiceStatus.Finalized;
+        FinalizedAtUtc = NormalizeUtc(finalizedAtUtc ?? DateTime.UtcNow);
+        RecalculateTotals();
+    }
+
+    public void Cancel()
+    {
+        if (Status == InvoiceStatus.Finalized)
+            throw new DomainException("Finalized invoices cannot be cancelled.");
+
+        Status = InvoiceStatus.Cancelled;
+    }
+
+    private void RecalculateTotals()
+    {
+        Subtotal = _items.Sum(item => item.LineTotal);
+        TotalAmount = Subtotal - DiscountAmount + TaxAmount;
+    }
+
+    private static DateTime NormalizeUtc(DateTime value) =>
+        value.Kind switch
         {
-            Id = Guid.NewGuid(),
-            InvoiceNumber = invoiceNumber,
-            OrderId = order.Id,
-            Order = order,
-            IssuedByUserId = createdByUserId,
-            IssuedAtUtc = DateTime.UtcNow,
-            TaxRate = 0m,
-            SubTotal = Money.Zero(currency),
-            Discount = Money.Zero(currency),
-            Tax = Money.Zero(currency),
-            GrandTotal = Money.Zero(currency),
-            PaymentStatus = PaymentStatus.Draft
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
         };
-    }
-
-    public void RecalculateFromOrder(Money discount, decimal taxRate)
-    {
-        if (PaymentStatus != PaymentStatus.Draft)
-            throw new DomainException("Invoice can only be recalculated while in draft.");
-
-        if (discount is null)
-            throw new DomainException("Invoice discount cannot be null.");
-
-        if (taxRate < 0 || taxRate > 100)
-            throw new DomainException("Tax rate must be between 0 and 100.");
-
-        var subTotal = Order.CalculateSubTotal();
-
-        if (discount.Currency != subTotal.Currency)
-            throw new DomainException($"Discount currency '{discount.Currency}' does not match order currency '{subTotal.Currency}'.");
-
-        if (discount > subTotal)
-            throw new DomainException("Discount cannot be greater than the order sub-total.");
-
-        SubTotal = subTotal;
-        Discount = discount;
-        TaxRate = taxRate;
-
-        var taxableAmount = subTotal.Subtract(discount);
-        Tax = taxableAmount.Percentage(taxRate);
-        GrandTotal = taxableAmount.Add(Tax);
-    }
-
-    public void MarkPendingPayment()
-    {
-        if (PaymentStatus != PaymentStatus.Draft)
-            throw new DomainException("Invoice must be in draft status to move to pending payment.");
-
-        PaymentStatus = PaymentStatus.PendingPayment;
-    }
-
-    public void Pay(Guid paidByUserId)
-    {
-        if (PaymentStatus != PaymentStatus.PendingPayment)
-            throw new DomainException("Only invoices pending payment can be paid.");
-
-        if (paidByUserId == Guid.Empty)
-            throw new DomainException("Invoice must be paid by a valid user.");
-
-        PaymentStatus = PaymentStatus.Paid;
-        PaidAtUtc = DateTime.UtcNow;
-        PaidByUserId = paidByUserId;
-        Raise(new InvoicePaid(Id, InvoiceNumber, PaidAtUtc.Value));
-    }
-
-    public void Cancel(Guid cancelledByUserId)
-    {
-        if (PaymentStatus == PaymentStatus.Paid)
-            throw new DomainException("Paid invoices cannot be cancelled. Use the refund process instead.");
-
-        if (PaymentStatus == PaymentStatus.Cancelled)
-            throw new DomainException("Invoice is already cancelled.");
-
-        if (cancelledByUserId == Guid.Empty)
-            throw new DomainException("Invoice must be cancelled by a valid user.");
-
-        PaymentStatus = PaymentStatus.Cancelled;
-        CancelledAtUtc = DateTime.UtcNow;
-        CancelledByUserId = cancelledByUserId;
-    }
-
-    public void ClearDomainEvents() => _domainEvents.Clear();
-
-    private void Raise(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
 }

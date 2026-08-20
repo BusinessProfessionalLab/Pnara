@@ -10,4 +10,11 @@ public interface IInvoiceRepository
     Task<IReadOnlyList<Invoice>> GetListAsync(DateTime? fromUtc = null, DateTime? toUtc = null, PaymentStatus? status = null, CancellationToken cancellationToken = default);
     Task AddAsync(Invoice invoice, CancellationToken cancellationToken = default);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Invoice>> GetFinalizedForReportAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        SalesChannel? channel = null,
+        PaymentMethod? paymentMethod = null,
+        CancellationToken cancellationToken = default);
 }

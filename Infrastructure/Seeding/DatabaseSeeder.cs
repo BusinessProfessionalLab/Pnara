@@ -1,6 +1,7 @@
 using Application.Interfaces;
 using Domain.Constants;
 using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Auth;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,7 @@ public static class DatabaseSeeder
         await SeedRolesAsync(dbContext);
         await SeedDefaultAdminAsync(dbContext, configuration, passwordHasher);
         await SeedCompanyInfoAsync(dbContext);
+        await SeedReceiptTemplatesAsync(dbContext);
     }
 
     private static async Task SeedPermissionsAsync(AppDbContext dbContext)
@@ -123,6 +125,43 @@ public static class DatabaseSeeder
 
         var companyInfo = CompanyInfo.Create("Pinara Restaurant", "/uploads/default/logo.png", taxEnabled: false, taxRate: 0m);
         await dbContext.CompanyInfos.AddAsync(companyInfo);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task SeedReceiptTemplatesAsync(AppDbContext dbContext)
+    {
+        if (!await dbContext.ReceiptTemplates.AnyAsync(
+                template => template.ReceiptType == ReceiptType.Kitchen))
+        {
+            await dbContext.ReceiptTemplates.AddAsync(ReceiptTemplate.Create(
+                ReceiptType.Kitchen,
+                headerText: null,
+                footerText: null,
+                showLogo: false,
+                showPrices: false,
+                showDiscount: false,
+                showTax: false,
+                showPaymentMethod: false,
+                showChannel: true,
+                fontSize: 1));
+        }
+
+        if (!await dbContext.ReceiptTemplates.AnyAsync(
+                template => template.ReceiptType == ReceiptType.Customer))
+        {
+            await dbContext.ReceiptTemplates.AddAsync(ReceiptTemplate.Create(
+                ReceiptType.Customer,
+                headerText: null,
+                footerText: "Thank you for your visit.",
+                showLogo: true,
+                showPrices: true,
+                showDiscount: true,
+                showTax: true,
+                showPaymentMethod: true,
+                showChannel: true,
+                fontSize: 1));
+        }
+
         await dbContext.SaveChangesAsync();
     }
 }

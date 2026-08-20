@@ -8,7 +8,10 @@ namespace WebApi.Controllers;
 [ApiController]
 [Authorize(Policy = "perm:manage")]
 [Route("api/menu")]
-public class MenuController(MenuGroupService menuGroupService, MenuItemService menuItemService) : ControllerBase
+public class MenuController(
+    MenuGroupService menuGroupService,
+    MenuItemService menuItemService,
+    MenuAddonService menuAddonService) : ControllerBase
 {
     [HttpPost("groups")]
     [ProducesResponseType(typeof(MenuGroupResponse), StatusCodes.Status201Created)]
@@ -101,4 +104,59 @@ public class MenuController(MenuGroupService menuGroupService, MenuItemService m
     [ProducesResponseType(typeof(IReadOnlyList<MenuItemResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetItemsByGroup(Guid groupId) =>
         Ok(await menuItemService.GetByGroupAsync(groupId));
+
+    [HttpPost("addons")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(MenuAddonResponse), StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateAddon(
+        CreateMenuAddonRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await menuAddonService.CreateAsync(request, cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    [HttpPut("addons/{id:guid}")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(MenuAddonResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateAddon(
+        Guid id,
+        UpdateMenuAddonRequest request,
+        CancellationToken cancellationToken = default) =>
+        Ok(await menuAddonService.UpdateAsync(id, request, cancellationToken));
+
+    [HttpPatch("addons/{id:guid}/availability")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> ChangeAddonAvailability(
+        Guid id,
+        ChangeAvailabilityRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        await menuAddonService.SetAvailabilityAsync(id, request.IsAvailable, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("addons")]
+    [ProducesResponseType(typeof(IReadOnlyList<MenuAddonResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAddons(
+        [FromQuery] bool includeUnavailable = false,
+        [FromQuery] Guid? menuItemId = null,
+        CancellationToken cancellationToken = default) =>
+        Ok(await menuAddonService.GetAllAsync(
+            includeUnavailable,
+            menuItemId,
+            cancellationToken));
+
+    [HttpPut("addons/{id:guid}/applicability")]
+    [Authorize(Policy = "AdminOnly")]
+    [ProducesResponseType(typeof(MenuAddonResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReplaceAddonApplicability(
+        Guid id,
+        ReplaceMenuAddonApplicabilityRequest request,
+        CancellationToken cancellationToken = default) =>
+        Ok(await menuAddonService.ReplaceApplicabilityAsync(
+            id,
+            request,
+            cancellationToken));
 }

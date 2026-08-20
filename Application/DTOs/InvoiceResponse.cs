@@ -1,38 +1,34 @@
+using Domain.Enums;
+
 namespace Application.DTOs;
 
 public record InvoiceResponse(
     Guid Id,
-    long InvoiceNumber,
-    Guid OrderId,
-    long OrderNumber,
-    string Channel,
+    string InvoiceNumber,
+    SalesChannel Channel,
+    InvoiceStatus Status,
+    PaymentMethod? PaymentMethod,
+    decimal Subtotal,
+    decimal DiscountAmount,
+    decimal TaxAmount,
+    decimal TotalAmount,
     DateTime IssuedAtUtc,
-    string IssuedAtJalali,
-    decimal SubTotal,
-    decimal Discount,
-    decimal TaxRate,
-    decimal Tax,
-    decimal GrandTotal,
-    string Currency,
-    string PaymentStatus,
-    DateTime? PaidAtUtc,
-    DateTime? CancelledAtUtc,
-    string? CustomerName,
-    string? DeliveryAddressLine,
-    string? DeliveryCity,
-    string? DeliveryPhoneNumber,
-    IReadOnlyList<OrderItemResponse> Items);
+    DateTime? FinalizedAtUtc,
+    IReadOnlyList<InvoiceItemResponse> Items);
 
-public record InvoiceListItemResponse(
+public record InvoiceItemResponse(
     Guid Id,
-    long InvoiceNumber,
-    Guid OrderId,
-    long OrderNumber,
-    string Channel,
-    DateTime IssuedAtUtc,
-    string IssuedAtJalali,
-    decimal GrandTotal,
-    string Currency,
-    string PaymentStatus,
-    string? TableNumber,
-    string? CustomerName);
+    Guid MenuItemId,
+    string ItemName,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal LineTotal,
+    IReadOnlyList<InvoiceItemAddonResponse> Addons);
+
+public record InvoiceItemAddonResponse(
+    Guid Id,
+    Guid MenuAddonId,
+    string AddonName,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal LineTotal);

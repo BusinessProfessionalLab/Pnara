@@ -8,17 +8,17 @@ using WebApi.Extensions;
 namespace WebApi.Controllers;
 
 [ApiController]
-[Authorize]
+[Authorize(Policy = "AdminOrOperator")]
 [Route("api/invoices")]
 public class InvoicesController(InvoiceService invoiceService) : ControllerBase
 {
-    [HttpPost("/api/orders/{orderId:guid}/invoice")]
-    [Authorize(Policy = "perm:invoices.issue")]
+    [HttpPost]
     [ProducesResponseType(typeof(InvoiceResponse), StatusCodes.Status201Created)]
-    public async Task<IActionResult> IssueInvoice(Guid orderId, IssueInvoiceRequest request)
+    public async Task<IActionResult> Create(
+        CreateInvoiceRequest request,
+        CancellationToken cancellationToken = default)
     {
-        var userId = User.GetUserId() ?? throw new UnauthorizedAccessException();
-        var response = await invoiceService.IssueInvoiceAsync(orderId, request, userId);
+        var response = await invoiceService.CreateAsync(request, cancellationToken);
         return StatusCode(StatusCodes.Status201Created, response);
     }
 
@@ -43,12 +43,16 @@ public class InvoicesController(InvoiceService invoiceService) : ControllerBase
     [HttpGet("{id:guid}")]
     [Authorize(Policy = "perm:invoices.view")]
     [ProducesResponseType(typeof(InvoiceResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetById(Guid id) =>
-        Ok(await invoiceService.GetByIdAsync(id));
+    public async Task<IActionResult> GetById(
+        Guid id,
+        CancellationToken cancellationToken = default) =>
+        Ok(await invoiceService.GetByIdAsync(id, cancellationToken));
 
-    [HttpGet]
-    [Authorize(Policy = "perm:invoices.view")]
-    [ProducesResponseType(typeof(IReadOnlyList<InvoiceListItemResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetList([FromQuery] string? from, [FromQuery] string? to, [FromQuery] PaymentStatus? status) =>
-        Ok(await invoiceService.GetListAsync(from, to, status));
+    [HttpPost("{id:guid}/settle")]
+    [ProducesResponseType(typeof(InvoiceResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> Settle(
+        Guid id,
+        FinalizeInvoiceRequest request,
+        CancellationToken cancellationToken = default) =>
+        Ok(await invoiceService.FinalizeAsync(id, request, cancellationToken));
 }

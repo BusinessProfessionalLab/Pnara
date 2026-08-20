@@ -6,42 +6,35 @@ namespace Application.Mappers;
 
 public static class InvoiceMapper
 {
-    public static InvoiceResponse ToResponse(this Invoice invoice, Order order) =>
+    public static InvoiceResponse ToResponse(this Invoice invoice) =>
         new(
             invoice.Id,
             invoice.InvoiceNumber,
-            invoice.OrderId,
-            order.OrderNumber,
-            order.Channel.ToString(),
+            invoice.Channel,
+            invoice.Status,
+            invoice.PaymentMethod,
+            invoice.Subtotal,
+            invoice.DiscountAmount,
+            invoice.TaxAmount,
+            invoice.TotalAmount,
             invoice.IssuedAtUtc,
-            PersianDateTime.ToJalaliString(invoice.IssuedAtUtc),
-            invoice.SubTotal.Amount,
-            invoice.Discount.Amount,
-            invoice.TaxRate,
-            invoice.Tax.Amount,
-            invoice.GrandTotal.Amount,
-            invoice.GrandTotal.Currency,
-            invoice.PaymentStatus.ToString(),
-            invoice.PaidAtUtc,
-            invoice.CancelledAtUtc,
-            order.CustomerName,
-            order.DeliveryAddressLine,
-            order.DeliveryCity,
-            order.DeliveryPhoneNumber,
-            order.Items.Select(item => item.ToResponse()).ToList());
-
-    public static InvoiceListItemResponse ToListItem(this Invoice invoice, Order order) =>
-        new(
-            invoice.Id,
-            invoice.InvoiceNumber,
-            invoice.OrderId,
-            order.OrderNumber,
-            order.Channel.ToString(),
-            invoice.IssuedAtUtc,
-            PersianDateTime.ToJalaliString(invoice.IssuedAtUtc),
-            invoice.GrandTotal.Amount,
-            invoice.GrandTotal.Currency,
-            invoice.PaymentStatus.ToString(),
-            order.TableNumber,
-            order.CustomerName);
+            invoice.FinalizedAtUtc,
+            invoice.Items
+                .Select(item => new InvoiceItemResponse(
+                    item.Id,
+                    item.MenuItemId,
+                    item.ItemName,
+                    item.Quantity,
+                    item.UnitPrice,
+                    item.LineTotal,
+                    item.Addons
+                        .Select(addon => new InvoiceItemAddonResponse(
+                            addon.Id,
+                            addon.MenuAddonId,
+                            addon.AddonName,
+                            addon.Quantity,
+                            addon.UnitPrice,
+                            addon.LineTotal))
+                        .ToList()))
+                .ToList());
 }
