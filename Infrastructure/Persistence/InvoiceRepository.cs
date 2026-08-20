@@ -10,6 +10,7 @@ public class InvoiceRepository(AppDbContext dbContext) : IInvoiceRepository
     public async Task<Invoice?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         await dbContext.Invoices
             .Include(invoice => invoice.Items)
+            .ThenInclude(item => item.Addons)
             .FirstOrDefaultAsync(invoice => invoice.Id == id, cancellationToken);
 
     public async Task AddAsync(Invoice invoice, CancellationToken cancellationToken = default) =>

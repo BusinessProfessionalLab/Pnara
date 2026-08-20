@@ -22,4 +22,13 @@ public record InvoiceItemResponse(
     string ItemName,
     decimal Quantity,
     decimal UnitPrice,
+    decimal LineTotal,
+    IReadOnlyList<InvoiceItemAddonResponse> Addons);
+
+public record InvoiceItemAddonResponse(
+    Guid Id,
+    Guid MenuAddonId,
+    string AddonName,
+    decimal Quantity,
+    decimal UnitPrice,
     decimal LineTotal);

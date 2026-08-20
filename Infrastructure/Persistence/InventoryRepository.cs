@@ -118,6 +118,26 @@ public class InventoryRepository(AppDbContext dbContext) : IInventoryRepository
         CancellationToken cancellationToken = default) =>
         await dbContext.MenuItemRecipes.AddAsync(recipe, cancellationToken);
 
+    public async Task<MenuAddonRecipe?> GetRecipeByMenuAddonIdAsync(
+        Guid menuAddonId,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.MenuAddonRecipes
+            .Include(recipe => recipe.Components)
+            .FirstOrDefaultAsync(recipe => recipe.MenuAddonId == menuAddonId, cancellationToken);
+
+    public async Task<IReadOnlyList<MenuAddonRecipe>> GetRecipesByMenuAddonIdsAsync(
+        IReadOnlyCollection<Guid> menuAddonIds,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.MenuAddonRecipes
+            .Include(recipe => recipe.Components)
+            .Where(recipe => menuAddonIds.Contains(recipe.MenuAddonId))
+            .ToListAsync(cancellationToken);
+
+    public async Task AddMenuAddonRecipeAsync(
+        MenuAddonRecipe recipe,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.MenuAddonRecipes.AddAsync(recipe, cancellationToken);
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         try

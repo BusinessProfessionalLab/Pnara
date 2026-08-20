@@ -25,6 +25,15 @@ public static class InvoiceMapper
                     item.ItemName,
                     item.Quantity,
                     item.UnitPrice,
-                    item.LineTotal))
+                    item.LineTotal,
+                    item.Addons
+                        .Select(addon => new InvoiceItemAddonResponse(
+                            addon.Id,
+                            addon.MenuAddonId,
+                            addon.AddonName,
+                            addon.Quantity,
+                            addon.UnitPrice,
+                            addon.LineTotal))
+                        .ToList()))
                 .ToList());
 }

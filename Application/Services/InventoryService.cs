@@ -10,7 +10,8 @@ namespace Application.Services;
 
 public class InventoryService(
     IInventoryRepository inventoryRepository,
-    IMenuItemRepository menuItemRepository)
+    IMenuItemRepository menuItemRepository,
+    IMenuAddonRepository menuAddonRepository)
 {
     public async Task<MeasurementUnitResponse> CreateUnitAsync(
         CreateMeasurementUnitRequest request,
@@ -253,6 +254,65 @@ public class InventoryService(
         return await MapRecipeAsync(recipe, ingredients, cancellationToken);
     }
 
+    public async Task<MenuAddonRecipeResponse> ReplaceMenuAddonRecipeAsync(
+        Guid menuAddonId,
+        ReplaceMenuItemRecipeRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        _ = await menuAddonRepository.GetByIdAsync(menuAddonId, cancellationToken)
+            ?? throw new NotFoundException($"Menu add-on with id '{menuAddonId}' was not found.");
+
+        var componentDefinitions = request.Components
+            .Select(component => (component.IngredientId, component.Quantity))
+            .ToList();
+        var ingredientIds = componentDefinitions
+            .Select(component => component.IngredientId)
+            .Distinct()
+            .ToList();
+        var ingredients = await inventoryRepository.GetIngredientsByIdsAsync(
+            ingredientIds,
+            cancellationToken);
+
+        if (ingredients.Count != ingredientIds.Count)
+            throw new NotFoundException("One or more recipe ingredients were not found.");
+
+        if (ingredients.Any(ingredient => !ingredient.IsActive))
+            throw new DomainException("Inactive ingredients cannot be added to a recipe.");
+
+        var recipe = await inventoryRepository.GetRecipeByMenuAddonIdAsync(
+            menuAddonId,
+            cancellationToken);
+
+        if (recipe is null)
+        {
+            recipe = MenuAddonRecipe.Create(menuAddonId, componentDefinitions);
+            await inventoryRepository.AddMenuAddonRecipeAsync(recipe, cancellationToken);
+        }
+        else
+        {
+            recipe.ReplaceComponents(componentDefinitions);
+        }
+
+        await inventoryRepository.SaveChangesAsync(cancellationToken);
+        return await MapAddonRecipeAsync(recipe, ingredients, cancellationToken);
+    }
+
+    public async Task<MenuAddonRecipeResponse> GetMenuAddonRecipeAsync(
+        Guid menuAddonId,
+        CancellationToken cancellationToken = default)
+    {
+        var recipe = await inventoryRepository.GetRecipeByMenuAddonIdAsync(
+            menuAddonId,
+            cancellationToken)
+            ?? throw new NotFoundException(
+                $"Recipe for menu add-on with id '{menuAddonId}' was not found.");
+
+        var ingredients = await inventoryRepository.GetIngredientsByIdsAsync(
+            recipe.Components.Select(component => component.IngredientId).ToList(),
+            cancellationToken);
+        return await MapAddonRecipeAsync(recipe, ingredients, cancellationToken);
+    }
+
     private async Task<MeasurementUnit> GetActiveUnitAsync(
         Guid id,
         CancellationToken cancellationToken)
@@ -268,6 +328,16 @@ public class InventoryService(
 
     private async Task<MenuItemRecipeResponse> MapRecipeAsync(
         MenuItemRecipe recipe,
+        IReadOnlyCollection<Ingredient> ingredients,
+        CancellationToken cancellationToken)
+    {
+        var ingredientMap = ingredients.ToDictionary(ingredient => ingredient.Id);
+        var unitMap = await GetUnitMapAsync(cancellationToken);
+        return recipe.ToResponse(ingredientMap, unitMap);
+    }
+
+    private async Task<MenuAddonRecipeResponse> MapAddonRecipeAsync(
+        MenuAddonRecipe recipe,
         IReadOnlyCollection<Ingredient> ingredients,
         CancellationToken cancellationToken)
     {

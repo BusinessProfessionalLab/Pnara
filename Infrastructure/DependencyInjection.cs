@@ -24,9 +24,12 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IMenuGroupRepository, MenuGroupRepository>();
         services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+        services.AddScoped<IMenuAddonRepository, MenuAddonRepository>();
         services.AddScoped<ICompanyInfoRepository, CompanyInfoRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
+        services.AddScoped<IPrintingRepository, PrintingRepository>();
+        services.AddSingleton<Application.Interfaces.IReceiptPrinterClient, Printing.EscPosTcpPrinterClient>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();

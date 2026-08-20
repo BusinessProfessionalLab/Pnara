@@ -4,6 +4,8 @@ namespace Domain.Entities;
 
 public class InvoiceItem
 {
+    private readonly List<InvoiceItemAddon> _addons = [];
+
     public Guid Id { get; private set; }
     public Guid InvoiceId { get; private set; }
     public Guid MenuItemId { get; private set; }
@@ -11,6 +13,7 @@ public class InvoiceItem
     public decimal Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }
     public decimal LineTotal { get; private set; }
+    public IReadOnlyCollection<InvoiceItemAddon> Addons => _addons.AsReadOnly();
 
     private InvoiceItem()
     {
@@ -23,7 +26,7 @@ public class InvoiceItem
         ItemName = itemName;
         Quantity = quantity;
         UnitPrice = unitPrice;
-        LineTotal = quantity * unitPrice;
+        RecalculateLineTotal();
     }
 
     public static InvoiceItem Create(Guid menuItemId, string itemName, decimal quantity, decimal unitPrice)
@@ -43,6 +46,14 @@ public class InvoiceItem
         return new InvoiceItem(menuItemId, itemName.Trim(), quantity, unitPrice);
     }
 
+    public void AddAddon(InvoiceItemAddon addon)
+    {
+        ArgumentNullException.ThrowIfNull(addon);
+        addon.AssignToInvoiceItem(Id);
+        _addons.Add(addon);
+        RecalculateLineTotal();
+    }
+
     internal void AssignToInvoice(Guid invoiceId)
     {
         if (invoiceId == Guid.Empty)
@@ -52,5 +63,10 @@ public class InvoiceItem
             throw new DomainException("Invoice item already belongs to another invoice.");
 
         InvoiceId = invoiceId;
+        foreach (var addon in _addons)
+            addon.AssignToInvoiceItem(Id);
     }
+
+    private void RecalculateLineTotal() =>
+        LineTotal = Quantity * UnitPrice + _addons.Sum(addon => addon.LineTotal);
 }

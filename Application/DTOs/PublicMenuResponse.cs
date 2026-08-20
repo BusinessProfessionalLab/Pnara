@@ -14,4 +14,12 @@ public record PublicMenuItemDto(
     string? Description,
     decimal Price,
     string? ImageUrl,
+    int DisplayOrder,
+    IReadOnlyList<PublicMenuAddonDto> Addons);
+
+public record PublicMenuAddonDto(
+    Guid Id,
+    string Name,
+    string? Description,
+    decimal Price,
     int DisplayOrder);

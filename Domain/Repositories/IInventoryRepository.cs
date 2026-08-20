@@ -66,5 +66,17 @@ public interface IInventoryRepository
         MenuItemRecipe recipe,
         CancellationToken cancellationToken = default);
 
+    Task<MenuAddonRecipe?> GetRecipeByMenuAddonIdAsync(
+        Guid menuAddonId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MenuAddonRecipe>> GetRecipesByMenuAddonIdsAsync(
+        IReadOnlyCollection<Guid> menuAddonIds,
+        CancellationToken cancellationToken = default);
+
+    Task AddMenuAddonRecipeAsync(
+        MenuAddonRecipe recipe,
+        CancellationToken cancellationToken = default);
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

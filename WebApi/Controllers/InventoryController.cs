@@ -108,4 +108,22 @@ public class InventoryController(InventoryService inventoryService) : Controller
         Guid menuItemId,
         CancellationToken cancellationToken = default) =>
         Ok(await inventoryService.GetMenuItemRecipeAsync(menuItemId, cancellationToken));
+
+    [HttpPut("recipes/menu-addons/{menuAddonId:guid}")]
+    [ProducesResponseType(typeof(MenuAddonRecipeResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReplaceMenuAddonRecipe(
+        Guid menuAddonId,
+        ReplaceMenuItemRecipeRequest request,
+        CancellationToken cancellationToken = default) =>
+        Ok(await inventoryService.ReplaceMenuAddonRecipeAsync(
+            menuAddonId,
+            request,
+            cancellationToken));
+
+    [HttpGet("recipes/menu-addons/{menuAddonId:guid}")]
+    [ProducesResponseType(typeof(MenuAddonRecipeResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMenuAddonRecipe(
+        Guid menuAddonId,
+        CancellationToken cancellationToken = default) =>
+        Ok(await inventoryService.GetMenuAddonRecipeAsync(menuAddonId, cancellationToken));
 }

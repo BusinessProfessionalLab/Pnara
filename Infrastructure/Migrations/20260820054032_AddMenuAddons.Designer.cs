@@ -3,6 +3,7 @@ using System;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820054032_AddMenuAddons")]
+    partial class AddMenuAddons
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -415,113 +418,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("MenuItemRecipes", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.PrinterDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ConnectionType")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Host")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<int>("PaperWidth")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Port")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
-
-                    b.ToTable("PrinterDefinitions", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.ReceiptPrinterMapping", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("PrinterDefinitionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("ReceiptType")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PrinterDefinitionId");
-
-                    b.HasIndex("ReceiptType")
-                        .IsUnique();
-
-                    b.ToTable("ReceiptPrinterMappings", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.ReceiptTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("FontSize")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("FooterText")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("HeaderText")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("ReceiptType")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("ShowChannel")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowDiscount")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowLogo")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowPaymentMethod")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowPrices")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("ShowTax")
-                        .HasColumnType("boolean");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReceiptType")
-                        .IsUnique();
-
-                    b.ToTable("ReceiptTemplates", (string)null);
-                });
-
             modelBuilder.Entity("Domain.Entities.RecipeComponent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -775,17 +671,6 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("Domain.Entities.MenuItemRecipe", "MenuItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Domain.Entities.ReceiptPrinterMapping", b =>
-                {
-                    b.HasOne("Domain.Entities.PrinterDefinition", "PrinterDefinition")
-                        .WithMany()
-                        .HasForeignKey("PrinterDefinitionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("PrinterDefinition");
                 });
 
             modelBuilder.Entity("Domain.Entities.RecipeComponent", b =>

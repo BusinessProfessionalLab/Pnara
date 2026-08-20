@@ -47,6 +47,83 @@ Customer ownership and external online payment verification remain intentionally
 - No database integration test was run because no test project or configured test database exists.
 - A Visual Studio-bundled Git executable is available; commit creation is pending the final staged-tree review.
 
-## Exact continuation for the next cycle
+## Result of this cycle (continued)
 
-Continue objective B by first introducing the missing add-on catalog/order model (`MenuAddon` plus invoice add-on snapshots and applicable-menu relationships), then add an add-on recipe target that reuses ingredient consumption and extend `InvoiceService.FinalizeAsync` to deduct both menu-item and add-on BOM quantities. Add tests for insufficient stock, concurrent settlement, idempotent settlement, and recipe replacement. After that, proceed to objective C (ESC/POS kitchen/customer printing).
+- Completed the missing add-on catalog/order model for Objective B:
+  - `MenuAddon` supports name, description, price, availability, and display order.
+  - `MenuAddonMenuItem` stores which add-ons are valid for each menu item.
+  - `InvoiceItemAddon` stores an immutable invoice snapshot of add-on name, unit price, quantity, and line total.
+  - Public menu responses now expose available add-ons per available menu item.
+- Added admin-managed add-on APIs:
+  - `POST/PUT/PATCH/GET /api/menu/addons...` for catalog and availability.
+  - `PUT /api/menu/addons/{id}/applicability` for replacing applicable menu items.
+- Added add-on BOM entities, repository methods, service methods, and admin-only APIs:
+  - `PUT/GET /api/inventory/recipes/menu-addons/{menuAddonId}`.
+- Extended invoice creation:
+  - validates add-on existence, availability, and applicability to the selected menu item;
+  - groups equivalent menu-item/add-on selections;
+  - snapshots add-on details into `InvoiceItem`.
+- Extended invoice finalization:
+  - loads add-on snapshots with the invoice;
+  - requires a recipe for every selected add-on;
+  - aggregates menu-item and add-on ingredient requirements together;
+  - deducts the combined requirement and writes the same invoice-linked kardex entries inside the existing atomic `SaveChangesAsync` boundary.
+- Added EF migration `20260820054032_AddMenuAddons` and updated `AppDbContextModelSnapshot`.
+
+## Files added or changed this cycle
+
+- Domain: `MenuAddon.cs`, `MenuAddonMenuItem.cs`, `InvoiceItemAddon.cs`, `MenuAddonRecipe.cs`, `MenuAddonRecipeComponent.cs`, `IMenuAddonRepository.cs`, plus `InvoiceItem.cs` and `IInventoryRepository.cs`.
+- Application: `MenuAddonRequests.cs`, `MenuAddonResponses.cs`, `MenuAddonMapper.cs`, `MenuAddonService.cs`, plus invoice/public-menu DTOs, mappers, `InvoiceService.cs`, `InventoryService.cs`, and `MenuGroupService.cs`.
+- Infrastructure: `MenuAddonRepository.cs`, `20260820054032_AddMenuAddons.cs`, its designer, snapshot, DbContext mappings, DI registration, inventory repository, and invoice repository eager-loading.
+- WebApi: menu/add-on and inventory recipe endpoints, service registrations, and menu controller dependencies.
+
+## Validation and stability (this cycle)
+
+- `dotnet build PinaraSolution.slnx --no-restore`: passed with 0 warnings and 0 errors.
+- `dotnet test PinaraSolution.slnx --no-restore`: passed; the solution contains no runnable test project.
+- `dotnet ef migrations script --idempotent --project Infrastructure --startup-project WebApi`: passed and produced a migration script.
+- No database integration test was run because no test project or configured test database exists.
+
+## Result of this cycle (Objective C - printing core)
+
+- Added printer and receipt configuration entities:
+  - `PrinterDefinition` with TCP connection settings, active state, and 58/80 mm paper width.
+  - `ReceiptTemplate` for kitchen/customer-specific header/footer, logo/pricing/tax/payment/channel visibility, font size, and active state.
+  - `ReceiptPrinterMapping` for one printer per receipt type.
+- Added `IReceiptPrinterClient` and an Infrastructure ESC/POS TCP adapter.
+- Added configurable receipt renderer:
+  - kitchen receipt hides prices and includes order number, channel, time, items, and add-ons;
+  - customer receipt supports company name/logo flag, item/add-on prices, discount, tax, total, payment method, and footer;
+  - width-aware output for 58 mm and 80 mm paper;
+  - ESC/POS initialize, line feed, and cut commands.
+- Added admin APIs:
+  - printer CRUD;
+  - kitchen/customer template upsert and listing;
+  - receipt-type-to-printer mapping.
+- Added operator/admin invoice printing API for customer or kitchen receipts.
+- Integrated automatic kitchen printing after successful invoice settlement.
+  - Printing is best-effort: a printer/network failure does not roll back a durable invoice or inventory transaction.
+  - Failed prints can be retried through the print endpoint.
+- Added default kitchen/customer templates during database seeding.
+- Added migration `20260820065250_AddReceiptPrinting` and updated the EF model snapshot.
+
+## Files added or changed this cycle
+
+- Domain: `ReceiptType.cs`, `PrinterConnectionType.cs`, `PrinterDefinition.cs`, `ReceiptTemplate.cs`, `ReceiptPrinterMapping.cs`, and `IPrintingRepository.cs`.
+- Application: printing DTOs, mappers, `IReceiptPrinterClient`, `IReceiptPrintingService`, `PrintingException`, `ReceiptPrintingService`, `EscPosReceiptRenderer`, and invoice settlement integration.
+- Infrastructure: `PrintingRepository`, `EscPosTcpPrinterClient`, EF mappings, DI registration, migration/designer, and snapshot.
+- WebApi: `PrintingController`, printing exception mapping, and service registration.
+- `PROGRESS.md`.
+
+## Validation and stability (this cycle)
+
+- `dotnet build PinaraSolution.slnx --no-restore`: passed with 0 warnings and 0 errors after final changes.
+- `dotnet test PinaraSolution.slnx --no-restore`: passed; the solution contains no runnable test project.
+- `dotnet ef migrations script --idempotent --project Infrastructure --startup-project WebApi`: passed and produced a complete script including the printing migration.
+- No database integration or physical-printer test was run because no configured test database or printer exists.
+
+## Known scope and next priority
+
+- The current printer adapter supports TCP ESC/POS. The interface and connection enum leave room for a serial adapter without changing Application services; serial support remains TODO.
+- Receipt templates currently expose the configurable fields represented by the existing invoice model. Table number, notes, customer identity, and logo bitmap rendering are not modeled by the current invoice/company entities and remain TODO.
+- Objective B remains complete. Continue Objective C with serial/bitmap printer support and richer order metadata if those models are introduced; then proceed to Objective D (PC-POS adapter) and Objective E (background services).

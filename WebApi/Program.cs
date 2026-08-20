@@ -22,10 +22,12 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
+builder.Services.AddScoped<MenuAddonService>();
 builder.Services.AddScoped<CompanyInfoService>();
 builder.Services.AddScoped<SalesReportService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<InventoryService>();
+builder.Services.AddScoped<ReceiptPrintingService>();
 
 builder.Services.AddCors(options =>
 {

@@ -11,4 +11,9 @@ public record CreateInvoiceRequest(
 
 public record CreateInvoiceItemRequest(
     Guid MenuItemId,
-    [Range(typeof(decimal), "0.001", "1000000")] decimal Quantity);
+    [Range(typeof(decimal), "0.001", "1000000")] decimal Quantity,
+    IReadOnlyList<CreateInvoiceItemAddonRequest>? Addons = null);
+
+public record CreateInvoiceItemAddonRequest(
+    Guid MenuAddonId,
+    [Range(typeof(decimal), "0.001", "1000000")] decimal Quantity = 1);

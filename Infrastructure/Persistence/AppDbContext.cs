@@ -13,6 +13,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CompanyInfo> CompanyInfos => Set<CompanyInfo>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<InvoiceItem> InvoiceItems => Set<InvoiceItem>();
+    public DbSet<InvoiceItemAddon> InvoiceItemAddons => Set<InvoiceItemAddon>();
+    public DbSet<MenuAddon> MenuAddons => Set<MenuAddon>();
+    public DbSet<MenuAddonMenuItem> MenuAddonMenuItems => Set<MenuAddonMenuItem>();
+    public DbSet<MenuAddonRecipe> MenuAddonRecipes => Set<MenuAddonRecipe>();
+    public DbSet<MenuAddonRecipeComponent> MenuAddonRecipeComponents => Set<MenuAddonRecipeComponent>();
+    public DbSet<PrinterDefinition> PrinterDefinitions => Set<PrinterDefinition>();
+    public DbSet<ReceiptTemplate> ReceiptTemplates => Set<ReceiptTemplate>();
+    public DbSet<ReceiptPrinterMapping> ReceiptPrinterMappings => Set<ReceiptPrinterMapping>();
     public DbSet<MeasurementUnit> MeasurementUnits => Set<MeasurementUnit>();
     public DbSet<Ingredient> Ingredients => Set<Ingredient>();
     public DbSet<StockLedgerEntry> StockLedgerEntries => Set<StockLedgerEntry>();
@@ -159,6 +167,72 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        modelBuilder.Entity<InvoiceItemAddon>(entity =>
+        {
+            entity.ToTable("InvoiceItemAddons");
+            entity.HasKey(addon => addon.Id);
+
+            entity.Property(addon => addon.AddonName)
+                .HasMaxLength(200)
+                .IsRequired();
+            entity.Property(addon => addon.Quantity)
+                .HasPrecision(18, 3)
+                .IsRequired();
+            entity.Property(addon => addon.UnitPrice)
+                .HasPrecision(18, 2)
+                .IsRequired();
+            entity.Property(addon => addon.LineTotal)
+                .HasPrecision(18, 2)
+                .IsRequired();
+
+            entity.HasIndex(addon => addon.MenuAddonId);
+            entity.HasOne<InvoiceItem>()
+                .WithMany(item => item.Addons)
+                .HasForeignKey(addon => addon.InvoiceItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MenuAddon>()
+                .WithMany()
+                .HasForeignKey(addon => addon.MenuAddonId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MenuAddon>(entity =>
+        {
+            entity.ToTable("MenuAddons");
+            entity.HasKey(addon => addon.Id);
+
+            entity.Property(addon => addon.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+            entity.HasIndex(addon => addon.Name)
+                .IsUnique();
+            entity.Property(addon => addon.Description)
+                .HasMaxLength(1000);
+            entity.Property(addon => addon.Price)
+                .HasPrecision(18, 2)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<MenuAddonMenuItem>(entity =>
+        {
+            entity.ToTable("MenuAddonMenuItems");
+            entity.HasKey(applicability => new
+            {
+                applicability.MenuAddonId,
+                applicability.MenuItemId
+            });
+
+            entity.HasIndex(applicability => applicability.MenuItemId);
+            entity.HasOne<MenuAddon>()
+                .WithMany()
+                .HasForeignKey(applicability => applicability.MenuAddonId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MenuItem>()
+                .WithMany()
+                .HasForeignKey(applicability => applicability.MenuItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<MeasurementUnit>(entity =>
         {
             entity.ToTable("MeasurementUnits");
@@ -271,6 +345,99 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne<Ingredient>()
                 .WithMany()
                 .HasForeignKey(component => component.IngredientId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MenuAddonRecipe>(entity =>
+        {
+            entity.ToTable("MenuAddonRecipes");
+            entity.HasKey(recipe => recipe.Id);
+
+            entity.HasIndex(recipe => recipe.MenuAddonId)
+                .IsUnique();
+            entity.HasOne<MenuAddon>()
+                .WithOne()
+                .HasForeignKey<MenuAddonRecipe>(recipe => recipe.MenuAddonId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MenuAddonRecipeComponent>(entity =>
+        {
+            entity.ToTable("MenuAddonRecipeComponents");
+            entity.HasKey(component => component.Id);
+
+            entity.Property(component => component.Quantity)
+                .HasPrecision(18, 3)
+                .IsRequired();
+
+            entity.HasIndex(component => new
+            {
+                component.RecipeId,
+                component.IngredientId
+            }).IsUnique();
+            entity.HasOne<MenuAddonRecipe>()
+                .WithMany(recipe => recipe.Components)
+                .HasForeignKey(component => component.RecipeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Ingredient>()
+                .WithMany()
+                .HasForeignKey(component => component.IngredientId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PrinterDefinition>(entity =>
+        {
+            entity.ToTable("PrinterDefinitions");
+            entity.HasKey(printer => printer.Id);
+
+            entity.Property(printer => printer.Name)
+                .HasMaxLength(200)
+                .IsRequired();
+            entity.HasIndex(printer => printer.Name)
+                .IsUnique();
+            entity.Property(printer => printer.ConnectionType)
+                .HasConversion<int>()
+                .IsRequired();
+            entity.Property(printer => printer.Host)
+                .HasMaxLength(200)
+                .IsRequired();
+            entity.Property(printer => printer.Port)
+                .IsRequired();
+            entity.Property(printer => printer.PaperWidth)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<ReceiptTemplate>(entity =>
+        {
+            entity.ToTable("ReceiptTemplates");
+            entity.HasKey(template => template.Id);
+
+            entity.Property(template => template.ReceiptType)
+                .HasConversion<int>()
+                .IsRequired();
+            entity.HasIndex(template => template.ReceiptType)
+                .IsUnique();
+            entity.Property(template => template.HeaderText)
+                .HasMaxLength(1000);
+            entity.Property(template => template.FooterText)
+                .HasMaxLength(1000);
+            entity.Property(template => template.FontSize)
+                .IsRequired();
+        });
+
+        modelBuilder.Entity<ReceiptPrinterMapping>(entity =>
+        {
+            entity.ToTable("ReceiptPrinterMappings");
+            entity.HasKey(mapping => mapping.Id);
+
+            entity.Property(mapping => mapping.ReceiptType)
+                .HasConversion<int>()
+                .IsRequired();
+            entity.HasIndex(mapping => mapping.ReceiptType)
+                .IsUnique();
+            entity.HasOne(mapping => mapping.PrinterDefinition)
+                .WithMany()
+                .HasForeignKey(mapping => mapping.PrinterDefinitionId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
