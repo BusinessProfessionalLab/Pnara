@@ -193,16 +193,16 @@ public class Order
 
     public void MarkPaid()
     {
-        if (Status != OrderStatus.Registered)
-            throw new DomainException("Only registered orders can be marked as paid.");
+        if (Status != OrderStatus.Invoiced)
+            throw new DomainException("Only invoiced orders can be marked as paid.");
 
         Status = OrderStatus.Paid;
     }
 
     public void CancelAfterInvoice()
     {
-        if (Status != OrderStatus.Registered)
-            throw new DomainException("Only registered orders can be cancelled after invoice cancellation.");
+        if (Status != OrderStatus.Invoiced)
+            throw new DomainException("Only invoiced orders can be cancelled after invoice cancellation.");
 
         Status = OrderStatus.Cancelled;
     }
@@ -217,6 +217,16 @@ public class Order
             total = total.Add(item.LineTotal);
 
         return total;
+    }
+
+    public LegacyInvoice IssueInvoice(long invoiceNumber, Money discount, decimal taxRate, Guid userId)
+    {
+        if (Status != OrderStatus.Registered)
+            throw new DomainException("Only registered orders can be invoiced.");
+        var invoice = LegacyInvoice.Create(this, invoiceNumber, discount, taxRate);
+        Status = OrderStatus.Invoiced;
+        Raise(new InvoiceIssued(Id, Id, invoiceNumber, invoice.GrandTotal.Amount, invoice.GrandTotal.Currency, DateTime.UtcNow));
+        return invoice;
     }
 
     public void ClearDomainEvents() => _domainEvents.Clear();

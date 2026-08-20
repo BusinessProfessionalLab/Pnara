@@ -9,6 +9,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<UserAddress> UserAddresses => Set<UserAddress>();
+    public DbSet<Permission> Permissions => Set<Permission>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<ModifierGroup> ModifierGroups => Set<ModifierGroup>();
+    public DbSet<ModifierGroupMenuItem> ModifierGroupMenuItems => Set<ModifierGroupMenuItem>();
+    public DbSet<Modifier> Modifiers => Set<Modifier>();
     public DbSet<MenuGroup> MenuGroups => Set<MenuGroup>();
     public DbSet<MenuItem> MenuItems => Set<MenuItem>();
     public DbSet<CompanyInfo> CompanyInfos => Set<CompanyInfo>();
@@ -27,12 +33,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<StockLedgerEntry> StockLedgerEntries => Set<StockLedgerEntry>();
     public DbSet<MenuItemRecipe> MenuItemRecipes => Set<MenuItemRecipe>();
     public DbSet<RecipeComponent> RecipeComponents => Set<RecipeComponent>();
+    public DbSet<PosTerminalDefinition> PosTerminalDefinitions => Set<PosTerminalDefinition>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasSequence<long>("OrderNumbers").StartsAt(1);
         modelBuilder.HasSequence<long>("InvoiceNumbers").StartsAt(1);
 
+        modelBuilder.Entity<CompanyInfo>(entity =>
+        {
             entity.Property(ci => ci.Name).HasMaxLength(200).IsRequired();
             entity.Property(ci => ci.LogoUrl).HasMaxLength(500).IsRequired();
         });
@@ -137,8 +146,108 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.Property(invoice => invoice.IssuedAtUtc)
                 .IsRequired();
             entity.Property(invoice => invoice.FinalizedAtUtc);
+            entity.Property(invoice => invoice.PosPaymentState).HasConversion<int>().IsRequired();
+            entity.Property(invoice => invoice.PaymentReferenceNumber).HasMaxLength(100);
+            entity.Property(invoice => invoice.PaymentError).HasMaxLength(500);
+            entity.Property(invoice => invoice.PaymentAttemptedAtUtc);
 
             entity.HasIndex(invoice => new { invoice.Status, invoice.FinalizedAtUtc });
+        });
+
+        modelBuilder.Entity<UserAddress>(entity =>
+        {
+            entity.ToTable("UserAddresses");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Title).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.AddressLine).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.City).HasMaxLength(100);
+            entity.Property(x => x.PhoneNumber).HasMaxLength(30).IsRequired();
+            entity.Property(x => x.PostalCode).HasMaxLength(20);
+            entity.HasIndex(x => x.UserId);
+        });
+
+        modelBuilder.Entity<Permission>(entity =>
+        {
+            entity.ToTable("Permissions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.Property(x => x.Description).HasMaxLength(500);
+            entity.Property(x => x.Group).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<RolePermission>(entity =>
+        {
+            entity.ToTable("RolePermissions");
+            entity.HasKey(x => new { x.RoleId, x.PermissionId });
+            entity.HasOne(x => x.Role).WithMany(x => x.RolePermissions)
+                .HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Permission).WithMany()
+                .HasForeignKey(x => x.PermissionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ModifierGroup>(entity =>
+        {
+            entity.ToTable("ModifierGroups");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.SelectionType).HasConversion<int>().IsRequired();
+            entity.HasMany(x => x.Modifiers).WithOne().HasForeignKey(x => x.ModifierGroupId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Modifier>(entity =>
+        {
+            entity.ToTable("Modifiers");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Price).HasPrecision(18, 2).IsRequired();
+        });
+
+        modelBuilder.Entity<ModifierGroupMenuItem>(entity =>
+        {
+            entity.ToTable("ModifierGroupMenuItems");
+            entity.HasKey(x => new { x.ModifierGroupId, x.MenuItemId });
+            entity.HasOne<ModifierGroup>().WithMany(x => x.MenuItems)
+                .HasForeignKey(x => x.ModifierGroupId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<MenuItem>().WithMany()
+                .HasForeignKey(x => x.MenuItemId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Channel).HasConversion<int>().IsRequired();
+            entity.Property(x => x.Status).HasConversion<int>().IsRequired();
+            entity.Property(x => x.CustomerName).HasMaxLength(200);
+            entity.Property(x => x.CustomerPhoneNumber).HasMaxLength(50);
+            entity.Property(x => x.TableNumber).HasMaxLength(20);
+            entity.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.ToTable("OrderItems");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ProductName).HasMaxLength(200).IsRequired();
+            entity.OwnsOne(x => x.UnitPrice, money =>
+            {
+                money.Property(x => x.Amount).HasColumnName("UnitPriceAmount").HasPrecision(18, 2);
+                money.Property(x => x.Currency).HasColumnName("UnitPriceCurrency").HasMaxLength(10);
+            });
+        });
+
+        modelBuilder.Entity<PosTerminalDefinition>(entity =>
+        {
+            entity.ToTable("PosTerminalDefinitions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.Provider).HasMaxLength(100).IsRequired();
+            entity.Property(x => x.ConnectionType).HasConversion<int>().IsRequired();
+            entity.Property(x => x.Host).HasMaxLength(255);
+            entity.Property(x => x.SerialPortName).HasMaxLength(100);
+            entity.Property(x => x.TimeoutSeconds).IsRequired();
+            entity.HasIndex(x => new { x.IsActive, x.Name });
         });
 
         modelBuilder.Entity<InvoiceItem>(entity =>

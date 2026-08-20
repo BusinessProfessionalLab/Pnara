@@ -33,6 +33,8 @@ builder.Services.AddScoped<SalesReportService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<ReceiptPrintingService>();
+builder.Services.AddScoped<IPosTerminalService, PosTerminalService>();
+builder.Services.AddScoped<PosTerminalManagementService>();
 
 builder.Services.AddCors(options =>
 {

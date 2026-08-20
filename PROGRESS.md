@@ -127,3 +127,73 @@ Customer ownership and external online payment verification remain intentionally
 - The current printer adapter supports TCP ESC/POS. The interface and connection enum leave room for a serial adapter without changing Application services; serial support remains TODO.
 - Receipt templates currently expose the configurable fields represented by the existing invoice model. Table number, notes, customer identity, and logo bitmap rendering are not modeled by the current invoice/company entities and remain TODO.
 - Objective B remains complete. Continue Objective C with serial/bitmap printer support and richer order metadata if those models are introduced; then proceed to Objective D (PC-POS adapter) and Objective E (background services).
+
+## Result of this cycle (Objective D foundation + stability repair)
+
+- Reconciled the incomplete invoice-model merge that was preventing the solution from compiling:
+  - restored missing `AppDbContext` sets and the `CompanyInfo` mapping;
+  - removed the stale conflicting invoice EF configuration;
+  - added a narrow legacy compatibility surface for the existing `OrderService` and domain tests without changing the current reporting/inventory invoice schema;
+  - restored order invoice state transitions and the original domain-event behavior.
+- Added the PC-POS application boundary:
+  - `IPosTerminalService` and `PosPaymentResult`;
+  - `PosTerminalService` fail-closed adapter boundary (no invoice is marked paid without a real terminal response);
+  - `POST /api/invoices/{id}/card-payment` endpoint for Admin/Operator users;
+  - `InvoiceService.RequestCardPaymentAsync` validates draft status and delegates the amount/invoice number to the adapter.
+
+## Files added or changed this cycle
+
+- Added: `Application/Interfaces/IPosTerminalService.cs`, `Application/Services/PosTerminalService.cs`, `WebApi/Controllers/PosPaymentsController.cs`, `Domain/Entities/LegacyInvoice.cs`.
+- Changed: `Domain/Entities/Invoice.cs`, `Domain/Entities/Order.cs`, `Domain/Enums/PaymentStatus.cs`, `Application/Mappers/InvoiceMapper.cs`, `Application/Services/InvoiceService.cs`, `Infrastructure/Persistence/AppDbContext.cs`, `WebApi/Program.cs`.
+- Removed: stale conflicting `Infrastructure/Persistence/Configurations/InvoiceConfiguration.cs`.
+
+## Validation and stability (this cycle)
+
+- `dotnet build PinaraSolution.slnx --no-restore`: passed with 0 errors (two existing nullable/unused-parameter warnings remain).
+- `dotnet test PinaraSolution.slnx --no-restore`: passed, 69/69 tests.
+- No physical terminal or database integration test was run.
+
+## Next priority
+
+- Complete Objective D with persisted terminal configuration (PSP/host/port or serial settings), a concrete PSP adapter, timeout/cancel/error state persistence, and atomic settlement + reference-number recording.
+- Then implement Objective E background services.
+
+## Result of this cycle (Objective D - persisted terminal flow)
+
+- Added persisted POS terminal configuration:
+  - `PosTerminalDefinition` with provider, TCP/serial connection details, timeout, active state, and validation.
+  - `IPosTerminalRepository` and EF implementation.
+  - Admin-only CRUD API under `/api/pos-terminals`.
+- Added durable POS payment state to invoices:
+  - pending, succeeded, failed, cancelled, timed out, and unknown;
+  - payment attempt timestamp, reference number, and error message.
+- Added adapter strategy boundary:
+  - `IPosTerminalAdapter`;
+  - TCP adapter using a bounded timeout and a small line protocol (`PAY|invoice|amount`, `OK|reference`, `CANCEL|message`);
+  - unsupported/missing providers fail closed.
+- Extended card-payment flow:
+  - persists Pending before contacting the terminal;
+  - persists terminal failure states;
+  - requires a reference number on success;
+  - finalizes the invoice only after successful terminal response;
+  - marks the payment Unknown if terminal success is received but inventory/invoice settlement fails.
+- Added migration `20260820143626_AddPosTerminals` and updated the EF model snapshot.
+- Added domain tests for terminal configuration validation and POS payment state transitions.
+
+## Files added or changed this cycle
+
+- Added: `Domain/Enums/PosTerminalConnectionType.cs`, `Domain/Enums/PosPaymentState.cs`, `Domain/Entities/PosTerminalDefinition.cs`, `Domain/Repositories/IPosTerminalRepository.cs`, `Application/Interfaces/IPosTerminalAdapter.cs`, `Application/DTOs/PosTerminalDtos.cs`, `Application/Mappers/PosTerminalMapper.cs`, `Application/Services/PosTerminalManagementService.cs`, `Application/Services/PosTerminalService.cs`, `Infrastructure/Persistence/PosTerminalRepository.cs`, `Infrastructure/PosTerminals/TcpPosTerminalAdapter.cs`, `WebApi/Controllers/PosTerminalsController.cs`, `Domain.Tests/PosTerminalTests.cs`, `Domain.Tests/InvoicePosPaymentTests.cs`, and migration `20260820143626_AddPosTerminals`.
+- Changed: `Domain/Entities/Invoice.cs`, `Application/Services/InvoiceService.cs`, `Infrastructure/Persistence/AppDbContext.cs`, `Infrastructure/DependencyInjection.cs`, `WebApi/Program.cs`, and `Infrastructure/Migrations/AppDbContextModelSnapshot.cs`.
+
+## Validation and stability (this cycle)
+
+- `dotnet build PinaraSolution.slnx --no-restore`: passed with 0 errors and 0 warnings.
+- `dotnet test PinaraSolution.slnx --no-restore`: passed, 73/73 tests.
+- `dotnet ef migrations script --idempotent --project Infrastructure --startup-project WebApi`: passed.
+- No physical terminal or configured database was available for an integration test.
+
+## Next priority
+
+- Add concrete PSP-specific adapters and serial transport implementation.
+- Add an explicit operator/admin retry endpoint for `Unknown` payments with reconciliation safeguards.
+- Then proceed to Objective E background services.

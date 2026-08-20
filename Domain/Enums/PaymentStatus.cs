@@ -5,5 +5,6 @@ public enum PaymentStatus
     Draft,
     PendingPayment,
     Paid,
-    Cancelled
+    Cancelled,
+    Pending = PendingPayment
 }

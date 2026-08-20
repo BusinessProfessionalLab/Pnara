@@ -31,6 +31,8 @@ public static class DependencyInjection
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IInventoryRepository, InventoryRepository>();
         services.AddScoped<IPrintingRepository, PrintingRepository>();
+        services.AddScoped<IPosTerminalRepository, PosTerminalRepository>();
+        services.AddScoped<Application.Interfaces.IPosTerminalAdapter, PosTerminals.TcpPosTerminalAdapter>();
         services.AddSingleton<Application.Interfaces.IReceiptPrinterClient, Printing.EscPosTcpPrinterClient>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddSingleton<IPasswordHasher, PasswordHasher>();

@@ -6,6 +6,8 @@ namespace Application.Mappers;
 
 public static class InvoiceMapper
 {
+    public static InvoiceResponse ToResponse(this Invoice invoice, Order _) => invoice.ToResponse();
+
     public static InvoiceResponse ToResponse(this Invoice invoice) =>
         new(
             invoice.Id,

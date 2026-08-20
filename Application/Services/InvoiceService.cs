@@ -17,7 +17,8 @@ public class InvoiceService(
     IMenuItemRepository menuItemRepository,
     IInventoryRepository inventoryRepository,
     IMenuAddonRepository menuAddonRepository,
-    IReceiptPrintingService receiptPrintingService)
+    IReceiptPrintingService receiptPrintingService,
+    IPosTerminalService posTerminalService)
 {
     public async Task<InvoiceResponse> CreateAsync(
         CreateInvoiceRequest request,
@@ -117,6 +118,24 @@ public class InvoiceService(
         return invoice.ToResponse();
     }
 
+    public async Task<InvoiceResponse> PayInvoiceAsync(Guid id, Guid userId)
+    {
+        var invoice = await invoiceRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Invoice with id '{id}' was not found.");
+        invoice.Pay(userId);
+        await invoiceRepository.SaveChangesAsync();
+        return invoice.ToResponse();
+    }
+
+    public async Task<InvoiceResponse> CancelInvoiceAsync(Guid id, Guid userId)
+    {
+        var invoice = await invoiceRepository.GetByIdAsync(id)
+            ?? throw new NotFoundException($"Invoice with id '{id}' was not found.");
+        invoice.Cancel(userId);
+        await invoiceRepository.SaveChangesAsync();
+        return invoice.ToResponse();
+    }
+
     public async Task<InvoiceResponse> FinalizeAsync(
         Guid id,
         FinalizeInvoiceRequest request,
@@ -145,6 +164,72 @@ public class InvoiceService(
         }
 
         return response;
+    }
+
+    public async Task<PosPaymentResult> RequestCardPaymentAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        var invoice = await invoiceRepository.GetByIdAsync(id, cancellationToken)
+            ?? throw new NotFoundException($"Invoice with id '{id}' was not found.");
+        if (invoice.Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can request card payment.");
+
+        invoice.BeginPosPayment();
+        await invoiceRepository.SaveChangesAsync(cancellationToken);
+
+        PosPaymentResult result;
+        try
+        {
+            result = await posTerminalService.RequestPaymentAsync(
+                invoice.TotalAmount,
+                invoice.InvoiceNumber,
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            invoice.FailPosPayment(PosPaymentState.TimedOut, "POS terminal request timed out.");
+            await invoiceRepository.SaveChangesAsync(cancellationToken);
+            return new(false, "TimedOut", ErrorMessage: "POS terminal request timed out.");
+        }
+
+        if (!result.Succeeded)
+        {
+            var state = result.Status.ToLowerInvariant() switch
+            {
+                "cancelled" => PosPaymentState.Cancelled,
+                "timedout" => PosPaymentState.TimedOut,
+                "unknown" => PosPaymentState.Unknown,
+                _ => PosPaymentState.Failed
+            };
+            invoice.FailPosPayment(state, result.ErrorMessage);
+            await invoiceRepository.SaveChangesAsync(cancellationToken);
+            return result;
+        }
+
+        invoice.CompletePosPayment(result.ReferenceNumber
+            ?? throw new DomainException("The POS terminal returned success without a reference number."));
+        await invoiceRepository.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await FinalizeAsync(
+                id,
+                new FinalizeInvoiceRequest(PaymentMethod.Card),
+                cancellationToken);
+            return result;
+        }
+        catch (Exception exception) when (exception is DomainException or InventoryConcurrencyException)
+        {
+            var current = await invoiceRepository.GetByIdAsync(id, cancellationToken);
+            if (current is not null)
+            {
+                current.MarkPaymentUnknown($"Payment succeeded but invoice settlement failed: {exception.Message}");
+                await invoiceRepository.SaveChangesAsync(cancellationToken);
+            }
+            return new(false, "Unknown", result.ReferenceNumber,
+                "Payment succeeded but invoice settlement could not be completed.");
+        }
     }
 
     private async Task ConsumeInventoryAsync(

@@ -9,6 +9,7 @@ namespace Domain.Entities;
 public class Invoice
 {
     private readonly List<InvoiceItem> _items = [];
+    private readonly List<IDomainEvent> _domainEvents = [];
 
     public Guid Id { get; private set; }
     public string InvoiceNumber { get; private set; } = null!;
@@ -21,6 +22,25 @@ public class Invoice
     public decimal TotalAmount { get; private set; }
     public DateTime IssuedAtUtc { get; private set; }
     public DateTime? FinalizedAtUtc { get; private set; }
+    public Guid? OrderId { get; private set; }
+    public Order? Order { get; private set; }
+    public Guid? IssuedByUserId { get; private set; }
+    public decimal TaxRate => Subtotal == 0 ? 0 : TaxAmount / Subtotal * 100m;
+    public decimal Discount => DiscountAmount;
+    public PaymentStatus PaymentStatus => Status switch
+    {
+        InvoiceStatus.Finalized => PaymentStatus.Paid,
+        InvoiceStatus.Cancelled => PaymentStatus.Cancelled,
+        _ => PaymentStatus.Draft
+    };
+    public DateTime? PaidAtUtc => FinalizedAtUtc;
+    public Guid? PaidByUserId { get; private set; }
+    public DateTime? CancelledAtUtc { get; private set; }
+    public Guid? CancelledByUserId { get; private set; }
+    public PosPaymentState PosPaymentState { get; private set; }
+    public string? PaymentReferenceNumber { get; private set; }
+    public string? PaymentError { get; private set; }
+    public DateTime? PaymentAttemptedAtUtc { get; private set; }
     public IReadOnlyCollection<InvoiceItem> Items => _items.AsReadOnly();
 
     public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
@@ -71,6 +91,76 @@ public class Invoice
             taxAmount,
             NormalizeUtc(issuedAtUtc ?? DateTime.UtcNow));
     }
+
+    public static Invoice CreateDraft(Order order, long invoiceNumber, Guid issuedByUserId)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        var invoice = Create(invoiceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            order.Channel == OrderChannel.Web ? SalesChannel.Online : SalesChannel.InPerson);
+        invoice.OrderId = order.Id;
+        invoice.Order = order;
+        invoice.IssuedByUserId = issuedByUserId;
+        return invoice;
+    }
+
+    public void RecalculateFromOrder(decimal discount, decimal taxRate)
+    {
+        if (discount < 0 || taxRate < 0 || taxRate > 100)
+            throw new DomainException("Invalid discount or tax rate.");
+        DiscountAmount = discount;
+        TaxAmount = Math.Round(Subtotal * taxRate / 100m, 2);
+        RecalculateTotals();
+    }
+
+    public void MarkPendingPayment() { }
+    public void BeginPosPayment(DateTime? attemptedAtUtc = null)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can start a POS payment.");
+        if (TotalAmount <= 0)
+            throw new DomainException("Invoice total must be positive.");
+        if (PosPaymentState == PosPaymentState.Pending)
+            throw new DomainException("A POS payment is already in progress.");
+
+        PosPaymentState = PosPaymentState.Pending;
+        PaymentReferenceNumber = null;
+        PaymentError = null;
+        PaymentAttemptedAtUtc = NormalizeUtc(attemptedAtUtc ?? DateTime.UtcNow);
+    }
+
+    public void CompletePosPayment(string referenceNumber)
+    {
+        if (PosPaymentState != PosPaymentState.Pending)
+            throw new DomainException("The invoice has no pending POS payment.");
+        if (string.IsNullOrWhiteSpace(referenceNumber))
+            throw new DomainException("A successful POS payment requires a reference number.");
+
+        PosPaymentState = PosPaymentState.Succeeded;
+        PaymentReferenceNumber = referenceNumber.Trim();
+        PaymentError = null;
+    }
+
+    public void FailPosPayment(PosPaymentState state, string? error)
+    {
+        if (state is not (PosPaymentState.Failed or PosPaymentState.Cancelled or PosPaymentState.TimedOut or PosPaymentState.Unknown))
+            throw new DomainException("Invalid POS failure state.");
+        if (PosPaymentState != PosPaymentState.Pending)
+            throw new DomainException("The invoice has no pending POS payment.");
+
+        PosPaymentState = state;
+        PaymentError = string.IsNullOrWhiteSpace(error) ? null : error.Trim();
+    }
+
+    public void MarkPaymentUnknown(string? error)
+    {
+        if (Status == InvoiceStatus.Finalized)
+            throw new DomainException("Finalized invoices cannot have an unknown payment state.");
+        PosPaymentState = PosPaymentState.Unknown;
+        PaymentError = string.IsNullOrWhiteSpace(error) ? null : error.Trim();
+    }
+    public void Pay(Guid userId) { Finalize(Domain.Enums.PaymentMethod.Card); PaidByUserId = userId; }
+    public void Cancel(Guid userId) { Cancel(); CancelledByUserId = userId; CancelledAtUtc = DateTime.UtcNow; }
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     public void AddItem(InvoiceItem item)
     {
