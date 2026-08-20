@@ -28,6 +28,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             RoleAlreadyExistsException => (StatusCodes.Status409Conflict, exception.Message),
             SystemRoleCannotBeDeletedException => (StatusCodes.Status400BadRequest, exception.Message),
             RoleInUseException => (StatusCodes.Status400BadRequest, exception.Message),
+            InventoryConcurrencyException => (StatusCodes.Status409Conflict, exception.Message),
             DomainException => (StatusCodes.Status400BadRequest, exception.Message),
             UnauthorizedAccessException => (StatusCodes.Status403Forbidden, exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")

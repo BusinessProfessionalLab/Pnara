@@ -23,6 +23,9 @@ builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<CompanyInfoService>();
+builder.Services.AddScoped<SalesReportService>();
+builder.Services.AddScoped<InvoiceService>();
+builder.Services.AddScoped<InventoryService>();
 
 builder.Services.AddCors(options =>
 {
