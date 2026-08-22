@@ -7,6 +7,6 @@ public class InvoiceNumberGenerator(AppDbContext dbContext) : IInvoiceNumberGene
 {
     public async Task<long> NextAsync(CancellationToken cancellationToken = default) =>
         await dbContext.Database
-            .SqlQueryRaw<long>("SELECT nextval('\"InvoiceNumbers\"')")
+            .SqlQueryRaw<long>("SELECT nextval('\"InvoiceNumbers\"') AS \"Value\"")
             .FirstAsync(cancellationToken);
 }

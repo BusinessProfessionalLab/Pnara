@@ -21,18 +21,22 @@ builder.Services.AddControllers();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthCookieService, AuthCookieService>();
+builder.Services.AddScoped<ILicenseService, LicenseService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<UserAddressService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<PermissionService>();
 builder.Services.AddScoped<MenuGroupService>();
 builder.Services.AddScoped<MenuItemService>();
 builder.Services.AddScoped<MenuAddonService>();
+builder.Services.AddScoped<ModifierGroupService>();
+builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<CompanyInfoService>();
 builder.Services.AddScoped<SalesReportService>();
 builder.Services.AddScoped<InvoiceService>();
 builder.Services.AddScoped<InventoryService>();
-builder.Services.AddScoped<ReceiptPrintingService>();
+builder.Services.AddScoped<IReceiptPrintingService, ReceiptPrintingService>();
 builder.Services.AddScoped<IPosTerminalService, PosTerminalService>();
 builder.Services.AddScoped<PosTerminalManagementService>();
 
@@ -78,7 +82,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("AdminOnly", policy => policy.RequireClaim("role", SystemRoles.Admin));
+    .AddPolicy("AdminOnly", policy => policy.RequireClaim("role", SystemRoles.Admin))
+    .AddPolicy("AdminOrOperator", policy => policy.RequireAssertion(context =>
+        context.User.HasClaim(c => c.Type == "role" &&
+            (c.Value == SystemRoles.Admin || c.Value == SystemRoles.Operator))));
 
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
 

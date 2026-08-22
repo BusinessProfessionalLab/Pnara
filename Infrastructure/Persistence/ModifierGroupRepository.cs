@@ -31,6 +31,9 @@ public class ModifierGroupRepository(AppDbContext dbContext) : IModifierGroupRep
     public async Task AddAsync(ModifierGroup modifierGroup, CancellationToken cancellationToken = default) =>
         await dbContext.ModifierGroups.AddAsync(modifierGroup, cancellationToken);
 
+    public async Task AddModifierAsync(Modifier modifier, CancellationToken cancellationToken = default) =>
+        await dbContext.Modifiers.AddAsync(modifier, cancellationToken);
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         await dbContext.SaveChangesAsync(cancellationToken);
 }

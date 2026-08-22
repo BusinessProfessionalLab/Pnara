@@ -56,7 +56,7 @@ public class ModifierGroupService(IModifierGroupRepository modifierGroupReposito
             ?? throw new NotFoundException($"Modifier group with id '{groupId}' was not found.");
 
         var modifier = group.AddModifier(request.Name, request.Price, request.DisplayOrder);
-
+        await modifierGroupRepository.AddModifierAsync(modifier);
         await modifierGroupRepository.SaveChangesAsync();
 
         return modifier.ToResponse();

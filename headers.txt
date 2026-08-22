@@ -1,0 +1,8 @@
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 22 Aug 2026 06:55:22 GMT
+Server: Kestrel
+Set-Cookie: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkMzJjYTJhMi1iYmY1LTRlMWItYjk1YS0yZGFmZGY0ZjhhMGIiLCJlbWFpbCI6ImFkbWluQHBpbmFyYS5jb20iLCJyb2xlIjoiQWRtaW4iLCJwZXJtaXNzaW9uIjpbImludm9pY2VzLnBheSIsImludm9pY2VzLmlzc3VlIiwiaW52b2ljZXMuY2FuY2VsIiwibWFuYWdlIiwic2V0dGluZ3MubWFuYWdlIiwiaW52b2ljZXMudmlldyIsIm9yZGVycy52aWV3IiwiZGFzaGJvYXJkLnZpZXciLCJvcmRlcnMuYXBwcm92ZSIsIm9yZGVycy5jcmVhdGUiXSwiZXhwIjoxNzg3Mzg1MzIyLCJpc3MiOiJQaW5hcmFTb2x1dGlvbiIsImF1ZCI6IlBpbmFyYVNvbHV0aW9uIn0.xCFnluup1XxRTFcZGhWiVSF39ietSxgmHe_Z1dxhbrY; expires=Sat, 22 Aug 2026 07:55:22 GMT; path=/; secure; samesite=none; httponly
+Set-Cookie: refreshToken=fDfGTNf7h%2BItnEC5pM%2BWxHv4w2n6pD9zT5No3VS0Xbfo%2FAvit1WoAo%2F8aLMyJsG5gmdG64%2BQYMy%2BCQPIvFN%2FxQ%3D%3D; expires=Sat, 29 Aug 2026 06:55:22 GMT; path=/api/auth; secure; samesite=none; httponly
+Transfer-Encoding: chunked
+

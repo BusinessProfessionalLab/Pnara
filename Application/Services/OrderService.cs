@@ -49,7 +49,8 @@ public class OrderService(
         if (!menuItem.IsAvailable)
             throw new DomainException($"Menu item '{menuItem.Name}' is not available.");
 
-        order.AddItem(menuItem.Id, menuItem.Name, Money.Create(menuItem.Price), request.Quantity);
+        var item = order.AddItem(menuItem.Id, menuItem.Name, Money.Create(menuItem.Price), request.Quantity);
+        await orderRepository.AddItemAsync(item);
 
         await RecalculateDraftInvoiceAsync(order);
         await orderRepository.SaveChangesAsync();

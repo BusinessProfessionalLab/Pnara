@@ -7,6 +7,6 @@ public class OrderNumberGenerator(AppDbContext dbContext) : IOrderNumberGenerato
 {
     public async Task<long> NextAsync(CancellationToken cancellationToken = default) =>
         await dbContext.Database
-            .SqlQueryRaw<long>("SELECT nextval('\"OrderNumbers\"')")
+            .SqlQueryRaw<long>("SELECT nextval('\"OrderNumbers\"') AS \"Value\"")
             .FirstAsync(cancellationToken);
 }
