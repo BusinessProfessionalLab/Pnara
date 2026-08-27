@@ -22,6 +22,11 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
 
         builder.Ignore(item => item.LineTotal);
 
+        builder.HasMany(item => item.Addons)
+            .WithOne()
+            .HasForeignKey(addon => addon.OrderItemId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         builder.HasIndex(item => item.MenuItemId);
     }
 }

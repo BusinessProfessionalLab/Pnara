@@ -28,6 +28,11 @@ public class ModifierGroupRepository(AppDbContext dbContext) : IModifierGroupRep
             .OrderBy(mg => mg.Name)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Modifier>> GetModifiersByIdsAsync(IReadOnlyList<Guid> modifierIds, CancellationToken cancellationToken = default) =>
+        await dbContext.Modifiers
+            .Where(m => modifierIds.Contains(m.Id))
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(ModifierGroup modifierGroup, CancellationToken cancellationToken = default) =>
         await dbContext.ModifierGroups.AddAsync(modifierGroup, cancellationToken);
 

@@ -5,6 +5,8 @@ namespace Domain.Entities;
 
 public class OrderItem
 {
+    private readonly List<OrderItemAddon> _addons = [];
+
     public Guid Id { get; private set; }
     public Guid OrderId { get; private set; }
     public Guid MenuItemId { get; private set; }
@@ -13,7 +15,11 @@ public class OrderItem
     public int Quantity { get; private set; }
     public DateTime AddedAtUtc { get; private set; }
 
-    public Money LineTotal => UnitPrice.Multiply(Quantity);
+    public IReadOnlyCollection<OrderItemAddon> Addons => _addons.AsReadOnly();
+
+    public Money LineTotal => UnitPrice.Multiply(Quantity).Add(Money.Create(AddonLineTotal, UnitPrice.Currency));
+
+    private decimal AddonLineTotal => _addons.Sum(addon => addon.LineTotal);
 
     private OrderItem()
     {
@@ -42,6 +48,21 @@ public class OrderItem
             Quantity = quantity,
             AddedAtUtc = DateTime.UtcNow
         };
+    }
+
+    public static OrderItem CreateWithAddons(Guid menuItemId, string productName, Money unitPrice, int quantity, IEnumerable<OrderItemAddon> addons)
+    {
+        var item = Create(menuItemId, productName, unitPrice, quantity);
+        foreach (var addon in addons)
+            item.AddAddon(addon);
+        return item;
+    }
+
+    public void AddAddon(OrderItemAddon addon)
+    {
+        ArgumentNullException.ThrowIfNull(addon);
+        addon.AssignToOrderItem(Id);
+        _addons.Add(addon);
     }
 
     internal void IncreaseQuantity(int quantity)

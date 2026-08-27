@@ -23,6 +23,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         var (statusCode, message) = exception switch
         {
             EmailAlreadyExistsException => (StatusCodes.Status409Conflict, exception.Message),
+            PhoneNumberAlreadyExistsException => (StatusCodes.Status409Conflict, exception.Message),
             InvalidCredentialsException => (StatusCodes.Status401Unauthorized, exception.Message),
             NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
             RoleNotFoundException => (StatusCodes.Status404NotFound, exception.Message),

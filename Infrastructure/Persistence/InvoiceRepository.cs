@@ -15,8 +15,11 @@ public class InvoiceRepository(AppDbContext dbContext) : IInvoiceRepository
 
     public async Task<Invoice?> GetByOrderIdAsync(Guid orderId, CancellationToken cancellationToken = default) =>
         await dbContext.Invoices
+            .Include(invoice => invoice.Items)
+                .ThenInclude(item => item.Addons)
             .Include(invoice => invoice.Order)
-            .ThenInclude(order => order.Items)
+                .ThenInclude(order => order.Items)
+                    .ThenInclude(item => item.Addons)
             .FirstOrDefaultAsync(invoice => invoice.OrderId == orderId, cancellationToken);
 
     public async Task<IReadOnlyList<Invoice>> GetListAsync(DateTime? fromUtc = null, DateTime? toUtc = null, PaymentStatus? status = null, CancellationToken cancellationToken = default) =>

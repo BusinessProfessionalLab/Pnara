@@ -22,6 +22,14 @@ public class UsersController(UserService userService) : ControllerBase
         return Ok(response);
     }
 
+    [HttpPut("me")]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateUserRequest request)
+    {
+        var userId = User.GetUserId() ?? throw new InvalidCredentialsException();
+        return Ok(await userService.UpdateAsync(userId, request));
+    }
+
     [HttpPut("{id:guid}/role")]
     [Authorize(Policy = "AdminOnly")]
     [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]

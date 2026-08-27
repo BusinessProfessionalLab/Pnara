@@ -1,4 +1,3 @@
-using Application.Common;
 using Application.DTOs;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -7,107 +6,15 @@ using Domain.Entities;
 using Domain.Enums;
 using Domain.Exceptions;
 using Domain.Repositories;
-using System.Globalization;
 
 namespace Application.Services;
 
 public class InvoiceService(
-    IOrderRepository orderRepository,
     IInvoiceRepository invoiceRepository,
-    IMenuItemRepository menuItemRepository,
     IInventoryRepository inventoryRepository,
-    IMenuAddonRepository menuAddonRepository,
     IReceiptPrintingService receiptPrintingService,
     IPosTerminalService posTerminalService)
 {
-    public async Task<InvoiceResponse> CreateAsync(
-        CreateInvoiceRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        if (request.Items is null || request.Items.Count == 0)
-            throw new DomainException("An invoice must contain at least one item.");
-
-        var invoice = Invoice.Create(
-            GenerateInvoiceNumber(),
-            request.Channel,
-            request.DiscountAmount,
-            request.TaxAmount);
-
-        var itemGroups = request.Items.GroupBy(item => new
-        {
-            item.MenuItemId,
-            AddonKey = BuildAddonKey(item.Addons)
-        });
-
-        foreach (var itemRequestGroup in itemGroups)
-        {
-            var menuItem = await menuItemRepository.GetByIdAsync(
-                itemRequestGroup.Key.MenuItemId,
-                cancellationToken)
-                ?? throw new NotFoundException(
-                    $"Menu item with id '{itemRequestGroup.Key.MenuItemId}' was not found.");
-
-            if (!menuItem.IsAvailable)
-                throw new DomainException($"Menu item '{menuItem.Name}' is not available.");
-
-            var quantity = itemRequestGroup.Sum(item => item.Quantity);
-            var invoiceItem = InvoiceItem.Create(
-                menuItem.Id,
-                menuItem.Name,
-                quantity,
-                menuItem.Price);
-
-            var addonRequests = itemRequestGroup.First().Addons?
-                .GroupBy(addon => addon.MenuAddonId)
-                .Select(group => new
-                {
-                    MenuAddonId = group.Key,
-                    Quantity = group.Sum(addon => addon.Quantity)
-                })
-                .ToList() ?? [];
-
-            if (addonRequests.Count > 0)
-            {
-                var addons = await menuAddonRepository.GetByIdsAsync(
-                    addonRequests.Select(addon => addon.MenuAddonId).ToList(),
-                    cancellationToken);
-                if (addons.Count != addonRequests.Count)
-                    throw new NotFoundException("One or more menu add-ons were not found.");
-
-                var addonMap = addons.ToDictionary(addon => addon.Id);
-                foreach (var addonRequest in addonRequests)
-                {
-                    var addon = addonMap[addonRequest.MenuAddonId];
-                    if (!addon.IsAvailable)
-                        throw new DomainException(
-                            $"Menu add-on '{addon.Name}' is not available.");
-
-                    if (!await menuAddonRepository.IsApplicableToMenuItemAsync(
-                            addon.Id,
-                            menuItem.Id,
-                            cancellationToken))
-                    {
-                        throw new DomainException(
-                            $"Menu add-on '{addon.Name}' is not applicable to menu item '{menuItem.Name}'.");
-                    }
-
-                    invoiceItem.AddAddon(InvoiceItemAddon.Create(
-                        addon.Id,
-                        addon.Name,
-                        addonRequest.Quantity * quantity,
-                        addon.Price));
-                }
-            }
-
-            invoice.AddItem(invoiceItem);
-        }
-
-        await invoiceRepository.AddAsync(invoice, cancellationToken);
-        await invoiceRepository.SaveChangesAsync(cancellationToken);
-
-        return invoice.ToResponse();
-    }
-
     public async Task<InvoiceResponse> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
@@ -331,27 +238,4 @@ public class InvoiceService(
                 cancellationToken);
         }
     }
-
-    private static string BuildAddonKey(
-        IReadOnlyList<CreateInvoiceItemAddonRequest>? addons)
-    {
-        if (addons is null || addons.Count == 0)
-            return string.Empty;
-
-        return string.Join(
-            "|",
-            addons
-                .GroupBy(addon => addon.MenuAddonId)
-                .Select(group => new
-                {
-                    MenuAddonId = group.Key,
-                    Quantity = group.Sum(addon => addon.Quantity)
-                })
-                .OrderBy(addon => addon.MenuAddonId)
-                .Select(addon =>
-                    $"{addon.MenuAddonId:N}:{addon.Quantity.ToString("0.###", CultureInfo.InvariantCulture)}"));
-    }
-
-    private static string GenerateInvoiceNumber() =>
-        $"INV-{DateTime.UtcNow:yyyyMMddHHmmssfff}-{Guid.NewGuid().ToString("N")[..8].ToUpperInvariant()}";
 }

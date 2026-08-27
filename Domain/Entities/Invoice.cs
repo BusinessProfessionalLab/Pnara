@@ -214,4 +214,13 @@ public class Invoice
             DateTimeKind.Local => value.ToUniversalTime(),
             _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
         };
+
+    public void RemoveItem(InvoiceItem item)
+    {
+        if (Status != InvoiceStatus.Draft)
+            throw new DomainException("Only draft invoices can be changed.");
+
+        _items.Remove(item);
+        RecalculateTotals();
+    }
 }

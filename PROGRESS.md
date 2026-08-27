@@ -197,3 +197,36 @@ Customer ownership and external online payment verification remain intentionally
 - Add concrete PSP-specific adapters and serial transport implementation.
 - Add an explicit operator/admin retry endpoint for `Unknown` payments with reconciliation safeguards.
 - Then proceed to Objective E background services.
+
+## Result of this cycle (Order addon support + unified order registration)
+
+- Added `OrderItemAddon` domain entity with name, price, quantity, and line total snapshot.
+- Extended `OrderItem` to support addons via `AddAddon` method and `CreateWithAddons` factory.
+- Added `Invoice.RemoveItem` method to support clearing and repopulating invoice items.
+- Extended `AddOrderItemRequest` DTO with optional `Addons` list.
+- Added `OrderItemAddonResponse` to `OrderResponse` for frontend display.
+- Created `RegisterOrderRequest` DTO for unified order registration with items + addons.
+- Added `POST /api/orders/register` endpoint:
+  - Accepts items with addons from frontend in a single request.
+  - Creates order, validates addons (existence, availability, applicability).
+  - Creates draft invoice with items and addons populated from order.
+  - Registers order and moves invoice to PendingPayment.
+  - Returns order + invoice response in one call.
+- Updated `OrderService.AddItemAsync` to support addon validation and attachment.
+- Updated `OrderService.RegisterAsync` and `ApproveAsync` to populate invoice items from order items.
+- Added `PopulateInvoiceItemsFromOrderAsync` helper that syncs invoice items from order items.
+- Updated `OrderRepository` and `InvoiceRepository` to include addons in queries.
+- Added EF configuration for `OrderItemAddon` in `AppDbContext`.
+- Added migration `20260822090148_AddOrderItemAddons`.
+- Created `AGENTS.md` with comprehensive architecture documentation.
+
+## Files added or changed this cycle
+
+- Added: `Domain/Entities/OrderItemAddon.cs`, `Application/DTOs/RegisterOrderRequest.cs`, `Infrastructure/Persistence/Configurations/OrderItemAddonConfiguration.cs`, `AGENTS.md`, and migration `20260822090148_AddOrderItemAddons`.
+- Changed: `Domain/Entities/OrderItem.cs`, `Domain/Entities/Invoice.cs`, `Application/DTOs/AddOrderItemRequest.cs`, `Application/DTOs/OrderResponse.cs`, `Application/Mappers/OrderMapper.cs`, `Application/Services/OrderService.cs`, `Infrastructure/Persistence/AppDbContext.cs`, `Infrastructure/Persistence/OrderRepository.cs`, `Infrastructure/Persistence/InvoiceRepository.cs`, `Infrastructure/Persistence/Configurations/OrderItemConfiguration.cs`, `WebApi/Controllers/OrdersController.cs`.
+
+## Validation and stability
+
+- `dotnet build PinaraSolution.slnx --no-restore`: passed with 0 errors and 0 warnings.
+- `dotnet test PinaraSolution.slnx --no-restore`: passed, 73/73 tests.
+- `dotnet ef migrations script --idempotent --project Infrastructure --startup-project WebApi`: passed.

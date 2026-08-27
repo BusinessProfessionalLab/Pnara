@@ -5,7 +5,7 @@ namespace Domain.Entities;
 public class User
 {
     public Guid Id { get; private set; }
-    public string Email { get; private set; } = null!;
+    public string PhoneNumber { get; private set; } = null!;
     public string PasswordHash { get; private set; } = null!;
     public string FirstName { get; private set; } = null!;
     public string LastName { get; private set; } = null!;
@@ -18,10 +18,10 @@ public class User
     {
     }
 
-    private User(string email, string passwordHash, string firstName, string lastName, Guid roleId)
+    private User(string phoneNumber, string passwordHash, string firstName, string lastName, Guid roleId)
     {
         Id = Guid.NewGuid();
-        Email = email;
+        PhoneNumber = phoneNumber;
         PasswordHash = passwordHash;
         FirstName = firstName;
         LastName = lastName;
@@ -30,16 +30,23 @@ public class User
         CreatedAt = DateTime.UtcNow;
     }
 
-    public static User Register(string email, string passwordHash, string firstName, string lastName, Guid roleId)
+    public static User Register(string phoneNumber, string passwordHash, string firstName, string lastName, Guid roleId)
     {
-        var normalizedEmail = ValidateAndNormalizeEmail(email);
-        return new User(normalizedEmail, passwordHash, firstName, lastName, roleId);
+        return new User(NormalizePhoneNumber(phoneNumber), passwordHash, firstName, lastName, roleId);
     }
 
-    public static User CreateByAdmin(string email, string passwordHash, string firstName, string lastName, Guid roleId)
+    public static User CreateByAdmin(string phoneNumber, string passwordHash, string firstName, string lastName, Guid roleId)
     {
-        var normalizedEmail = ValidateAndNormalizeEmail(email);
-        return new User(normalizedEmail, passwordHash, firstName, lastName, roleId);
+        return new User(NormalizePhoneNumber(phoneNumber), passwordHash, firstName, lastName, roleId);
+    }
+
+    public void UpdateProfile(string? phoneNumber, string? firstName, string? lastName, string? passwordHash)
+    {
+        if (!string.IsNullOrWhiteSpace(phoneNumber))
+            PhoneNumber = NormalizePhoneNumber(phoneNumber);
+        if (firstName is not null) FirstName = firstName.Trim();
+        if (lastName is not null) LastName = lastName.Trim();
+        if (passwordHash is not null) PasswordHash = passwordHash;
     }
 
     public void ChangeRole(Guid newRoleId)
@@ -60,11 +67,14 @@ public class User
         IsActive = true;
     }
 
-    private static string ValidateAndNormalizeEmail(string email)
+    private static string NormalizePhoneNumber(string phoneNumber)
     {
-        if (string.IsNullOrWhiteSpace(email))
-            throw new DomainException("Email cannot be empty.");
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            throw new DomainException("Phone number cannot be empty.");
 
-        return email.Trim().ToLowerInvariant();
+        var normalized = phoneNumber.Trim();
+        if (normalized.Length < 7 || normalized.Length > 30)
+            throw new DomainException("Phone number must be between 7 and 30 characters.");
+        return normalized;
     }
 }

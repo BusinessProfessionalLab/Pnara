@@ -22,16 +22,16 @@ public class AuthService(
     {
         await licenseService.ValidateTrialAsync();
 
-        var email = NormalizeEmail(request.Email);
+        var phoneNumber = NormalizePhoneNumber(request.PhoneNumber);
 
-        if (await userRepository.ExistsByEmailAsync(email))
-            throw new EmailAlreadyExistsException();
+        if (await userRepository.ExistsByPhoneNumberAsync(phoneNumber))
+            throw new PhoneNumberAlreadyExistsException();
 
         var defaultRole = await roleRepository.GetByNameAsync(SystemRoles.User)
             ?? throw new InvalidOperationException("Default 'User' role not found in the system.");
 
         var passwordHash = passwordHasher.Hash(request.Password);
-        var user = User.Register(email, passwordHash, request.FirstName, request.LastName, defaultRole.Id);
+        var user = User.Register(phoneNumber, passwordHash, request.FirstName, request.LastName, defaultRole.Id);
 
         await userRepository.AddAsync(user);
         await userRepository.SaveChangesAsync();
@@ -43,9 +43,9 @@ public class AuthService(
     {
         await licenseService.ValidateTrialAsync();
 
-        var email = NormalizeEmail(request.Email);
+        var phoneNumber = NormalizePhoneNumber(request.PhoneNumber);
 
-        var user = await userRepository.GetByEmailAsync(email);
+        var user = await userRepository.GetByPhoneNumberAsync(phoneNumber);
 
         if (user is null || !user.IsActive || !passwordHasher.Verify(user.PasswordHash, request.Password))
             throw new InvalidCredentialsException();
@@ -104,13 +104,13 @@ public class AuthService(
         if (targetRole.Name == SystemRoles.Admin)
             throw new CannotAssignAdminRoleException("New Admin users cannot be created. Assign a different role.");
 
-        var email = NormalizeEmail(request.Email);
+        var phoneNumber = NormalizePhoneNumber(request.PhoneNumber);
 
-        if (await userRepository.ExistsByEmailAsync(email))
-            throw new EmailAlreadyExistsException();
+        if (await userRepository.ExistsByPhoneNumberAsync(phoneNumber))
+            throw new PhoneNumberAlreadyExistsException();
 
         var passwordHash = passwordHasher.Hash(request.Password);
-        var user = User.CreateByAdmin(email, passwordHash, request.FirstName, request.LastName, targetRole.Id);
+        var user = User.CreateByAdmin(phoneNumber, passwordHash, request.FirstName, request.LastName, targetRole.Id);
 
         await userRepository.AddAsync(user);
         await userRepository.SaveChangesAsync();
@@ -135,5 +135,5 @@ public class AuthService(
         return user.ToResponse(permissions.ToList());
     }
 
-    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+    private static string NormalizePhoneNumber(string phoneNumber) => phoneNumber.Trim();
 }

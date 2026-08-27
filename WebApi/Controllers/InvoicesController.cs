@@ -12,16 +12,6 @@ namespace WebApi.Controllers;
 [Route("api/invoices")]
 public class InvoicesController(InvoiceService invoiceService) : ControllerBase
 {
-    [HttpPost]
-    [ProducesResponseType(typeof(InvoiceResponse), StatusCodes.Status201Created)]
-    public async Task<IActionResult> Create(
-        CreateInvoiceRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var response = await invoiceService.CreateAsync(request, cancellationToken);
-        return StatusCode(StatusCodes.Status201Created, response);
-    }
-
     [HttpPost("{id:guid}/pay")]
     [Authorize(Policy = "perm:invoices.pay")]
     [ProducesResponseType(typeof(InvoiceResponse), StatusCodes.Status200OK)]

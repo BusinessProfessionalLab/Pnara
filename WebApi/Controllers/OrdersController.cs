@@ -12,28 +12,6 @@ namespace WebApi.Controllers;
 [Route("api/orders")]
 public class OrdersController(OrderService orderService) : ControllerBase
 {
-    [HttpPost]
-    [Authorize(Policy = "perm:orders.create")]
-    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status201Created)]
-    public async Task<IActionResult> CreatePosOrder()
-    {
-        var userId = User.GetUserId() ?? throw new UnauthorizedAccessException();
-        var response = await orderService.CreatePosDraftAsync(userId);
-        return StatusCode(StatusCodes.Status201Created, response);
-    }
-
-    [HttpPost("{id:guid}/items")]
-    [Authorize(Policy = "perm:orders.create")]
-    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> AddItem(Guid id, AddOrderItemRequest request) =>
-        Ok(await orderService.AddItemAsync(id, request));
-
-    [HttpDelete("{id:guid}/items/{itemId:guid}")]
-    [Authorize(Policy = "perm:orders.create")]
-    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> RemoveItem(Guid id, Guid itemId) =>
-        Ok(await orderService.RemoveItemAsync(id, itemId));
-
     [HttpPost("{id:guid}/cancel")]
     [Authorize(Policy = "perm:orders.create")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
@@ -42,12 +20,6 @@ public class OrdersController(OrderService orderService) : ControllerBase
         await orderService.CancelAsync(id);
         return NoContent();
     }
-
-    [HttpPost("{id:guid}/register")]
-    [Authorize(Policy = "perm:orders.create")]
-    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> Register(Guid id) =>
-        Ok(await orderService.RegisterAsync(id));
 
     [HttpPut("{id:guid}/table-number")]
     [Authorize(Policy = "perm:orders.create")]
@@ -84,5 +56,15 @@ public class OrdersController(OrderService orderService) : ControllerBase
         var reviewerId = User.GetUserId() ?? throw new UnauthorizedAccessException();
         await orderService.RejectAsync(id, reviewerId, request.Reason);
         return NoContent();
+    }
+
+    [HttpPost("register")]
+    [Authorize(Policy = "perm:orders.create")]
+    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status201Created)]
+    public async Task<IActionResult> RegisterOrder(RegisterOrderRequest request)
+    {
+        var userId = User.GetUserId() ?? throw new UnauthorizedAccessException();
+        var response = await orderService.RegisterOrderAsync(request, userId);
+        return StatusCode(StatusCodes.Status201Created, response);
     }
 }

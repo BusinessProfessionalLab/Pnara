@@ -6,8 +6,19 @@ namespace Application.Mappers;
 
 public static class OrderMapper
 {
+    public static OrderItemAddonResponse ToResponse(this OrderItemAddon addon) =>
+        new(addon.Id, addon.ModifierId, addon.AddonName, addon.Quantity, addon.UnitPrice, addon.LineTotal);
+
     public static OrderItemResponse ToResponse(this OrderItem item) =>
-        new(item.Id, item.MenuItemId, item.ProductName, item.UnitPrice.Amount, item.UnitPrice.Currency, item.Quantity, item.LineTotal.Amount);
+        new(
+            item.Id,
+            item.MenuItemId,
+            item.ProductName,
+            item.UnitPrice.Amount,
+            item.UnitPrice.Currency,
+            item.Quantity,
+            item.LineTotal.Amount,
+            item.Addons.Select(ToResponse).ToList());
 
     public static OrderResponse ToResponse(this Order order, Invoice? invoice = null) =>
         new(

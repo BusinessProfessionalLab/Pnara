@@ -1,4 +1,4 @@
-using Application.DTOs;
+﻿using Application.DTOs;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
@@ -15,6 +15,7 @@ public class OrderService(
     IOrderRepository orderRepository,
     IInvoiceRepository invoiceRepository,
     IMenuItemRepository menuItemRepository,
+    IModifierGroupRepository modifierGroupRepository,
     IUserRepository userRepository,
     IUserAddressRepository userAddressRepository,
     ICompanyInfoRepository companyInfoRepository,
@@ -23,10 +24,49 @@ public class OrderService(
     IDomainEventDispatcher domainEventDispatcher,
     ILogger<OrderService> logger)
 {
-    public async Task<OrderResponse> CreatePosDraftAsync(Guid userId, string? tableNumber = null)
+    public async Task<OrderResponse> RegisterOrderAsync(RegisterOrderRequest request, Guid userId)
     {
+        if (request.Items is null || request.Items.Count == 0)
+            throw new DomainException("Order must contain at least one item.");
+
         var orderNumber = await orderNumberGenerator.NextAsync();
-        var order = Order.CreatePosDraft(orderNumber, userId, tableNumber);
+        var order = Order.CreatePosDraft(orderNumber, userId, request.TableNumber);
+
+        foreach (var requestItem in request.Items)
+        {
+            var menuItem = await menuItemRepository.GetByIdAsync(requestItem.MenuItemId)
+                ?? throw new NotFoundException($"Menu item with id '{requestItem.MenuItemId}' was not found.");
+
+            if (!menuItem.IsAvailable)
+                throw new DomainException($"Menu item '{menuItem.Name}' is not available.");
+
+            var item = order.AddItem(menuItem.Id, menuItem.Name, Money.Create(menuItem.Price), requestItem.Quantity);
+
+            if (requestItem.Addons is not null && requestItem.Addons.Count > 0)
+            {
+                var modifierIds = requestItem.Addons.Select(a => a.ModifierId).Distinct().ToList();
+                var modifiers = await modifierGroupRepository.GetModifiersByIdsAsync(modifierIds);
+                if (modifiers.Count != modifierIds.Count)
+                    throw new NotFoundException("One or more modifiers were not found.");
+
+                var modifierGroups = await modifierGroupRepository.GetByMenuItemAsync(menuItem.Id);
+                var applicableModifierIds = modifierGroups.SelectMany(g => g.Modifiers).Select(m => m.Id).ToHashSet();
+
+                foreach (var addonRequest in requestItem.Addons)
+                {
+                    var modifier = modifiers.FirstOrDefault(m => m.Id == addonRequest.ModifierId)
+                        ?? throw new NotFoundException($"Modifier with id '{addonRequest.ModifierId}' was not found.");
+
+                    if (!modifier.IsAvailable)
+                        throw new DomainException($"Modifier '{modifier.Name}' is not available.");
+
+                    if (!applicableModifierIds.Contains(modifier.Id))
+                        throw new DomainException($"Modifier '{modifier.Name}' is not applicable to menu item '{menuItem.Name}'.");
+
+                    item.AddAddon(OrderItemAddon.Create(modifier.Id, modifier.Name, addonRequest.Quantity * requestItem.Quantity, modifier.Price));
+                }
+            }
+        }
 
         var invoiceNumber = await invoiceNumberGenerator.NextAsync();
         var invoice = Invoice.CreateDraft(order, invoiceNumber, userId);
@@ -35,40 +75,23 @@ public class OrderService(
         await invoiceRepository.AddAsync(invoice);
         await orderRepository.SaveChangesAsync();
 
-        logger.LogInformation("POS draft order {OrderId} created with number {OrderNumber}, table {TableNumber}.", order.Id, order.OrderNumber, tableNumber);
-        return order.ToResponse(invoice);
-    }
+        await PopulateInvoiceItemsFromOrderAsync(order, invoice);
 
-    public async Task<OrderResponse> AddItemAsync(Guid orderId, AddOrderItemRequest request)
-    {
-        var order = await GetOrderAsync(orderId);
+        order.Register();
 
-        var menuItem = await menuItemRepository.GetByIdAsync(request.MenuItemId)
-            ?? throw new NotFoundException($"Menu item with id '{request.MenuItemId}' was not found.");
+        var companyInfo = await GetCompanyInfoAsync();
+        var taxRate = companyInfo is { TaxEnabled: true } ? companyInfo.TaxRate : 0m;
+        invoice.RecalculateFromOrder(invoice.Discount, taxRate);
+        invoice.MarkPendingPayment();
 
-        if (!menuItem.IsAvailable)
-            throw new DomainException($"Menu item '{menuItem.Name}' is not available.");
-
-        var item = order.AddItem(menuItem.Id, menuItem.Name, Money.Create(menuItem.Price), request.Quantity);
-        await orderRepository.AddItemAsync(item);
-
-        await RecalculateDraftInvoiceAsync(order);
         await orderRepository.SaveChangesAsync();
 
-        var invoice = await GetDraftInvoiceAsync(order.Id);
-        return order.ToResponse(invoice);
-    }
+        var events = order.DomainEvents.Concat(invoice.DomainEvents).ToList();
+        order.ClearDomainEvents();
+        invoice.ClearDomainEvents();
+        await domainEventDispatcher.DispatchAsync(events);
 
-    public async Task<OrderResponse> RemoveItemAsync(Guid orderId, Guid orderItemId)
-    {
-        var order = await GetOrderAsync(orderId);
-
-        order.RemoveItem(orderItemId);
-
-        await RecalculateDraftInvoiceAsync(order);
-        await orderRepository.SaveChangesAsync();
-
-        var invoice = await GetDraftInvoiceAsync(order.Id);
+        logger.LogInformation("Order {OrderId} registered with number {OrderNumber}. Invoice {InvoiceNumber} moved to PendingPayment.", order.Id, order.OrderNumber, invoice.InvoiceNumber);
         return order.ToResponse(invoice);
     }
 
@@ -128,8 +151,7 @@ public class OrderService(
         }
 
         var orderNumber = await orderNumberGenerator.NextAsync();
-        var customerName = $"{user.FirstName} {user.LastName}".Trim();
-        var order = Order.CreateWebOrder(orderNumber, userId, customerName, address, items);
+        var order = Order.CreateWebOrder(orderNumber, userId, $"{user.FirstName} {user.LastName}", address, items);
 
         var invoiceNumber = await invoiceNumberGenerator.NextAsync();
         var invoice = Invoice.CreateDraft(order, invoiceNumber, userId);
@@ -152,6 +174,7 @@ public class OrderService(
             ?? throw new NotFoundException("Draft invoice not found for this order.");
 
         await ApplyCurrentPriceSnapshotsAsync(order);
+        await PopulateInvoiceItemsFromOrderAsync(order, invoice);
 
         var companyInfo = await GetCompanyInfoAsync();
         var taxRate = companyInfo is { TaxEnabled: true } ? companyInfo.TaxRate : 0m;
@@ -179,35 +202,6 @@ public class OrderService(
 
         await orderRepository.SaveChangesAsync();
         logger.LogInformation("Order {OrderId} was rejected.", order.Id);
-    }
-
-    public async Task<OrderResponse> RegisterAsync(Guid orderId)
-    {
-        var order = await GetOrderAsync(orderId);
-
-        order.Register();
-
-        var invoice = await GetDraftInvoiceAsync(order.Id)
-            ?? throw new NotFoundException("Draft invoice not found for this order.");
-
-        await ApplyCurrentPriceSnapshotsAsync(order);
-
-        var companyInfo = await GetCompanyInfoAsync();
-        var taxRate = companyInfo is { TaxEnabled: true } ? companyInfo.TaxRate : 0m;
-        var discount = invoice.Discount;
-
-        invoice.RecalculateFromOrder(discount, taxRate);
-        invoice.MarkPendingPayment();
-
-        await orderRepository.SaveChangesAsync();
-
-        var events = order.DomainEvents.Concat(invoice.DomainEvents).ToList();
-        order.ClearDomainEvents();
-        invoice.ClearDomainEvents();
-        await domainEventDispatcher.DispatchAsync(events);
-
-        logger.LogInformation("Order {OrderId} registered. Invoice {InvoiceNumber} moved to PendingPayment.", order.Id, invoice.InvoiceNumber);
-        return order.ToResponse(invoice);
     }
 
     public async Task<OrderResponse> GetByIdAsync(Guid orderId)
@@ -238,13 +232,33 @@ public class OrderService(
     private async Task<Invoice?> GetDraftInvoiceAsync(Guid orderId) =>
         await invoiceRepository.GetByOrderIdAsync(orderId);
 
-    private async Task RecalculateDraftInvoiceAsync(Order order)
+    private async Task PopulateInvoiceItemsFromOrderAsync(Order order, Invoice invoice)
     {
-        var invoice = await GetDraftInvoiceAsync(order.Id);
-        if (invoice is null || invoice.PaymentStatus != PaymentStatus.Draft)
-            return;
+        var existingItems = invoice.Items.ToList();
+        foreach (var existingItem in existingItems)
+        {
+            invoice.RemoveItem(existingItem);
+        }
 
-        invoice.RecalculateFromOrder(invoice.Discount, invoice.TaxRate);
+        foreach (var orderItem in order.Items)
+        {
+            var invoiceItem = InvoiceItem.Create(
+                orderItem.MenuItemId,
+                orderItem.ProductName,
+                orderItem.Quantity,
+                orderItem.UnitPrice.Amount);
+
+            foreach (var addon in orderItem.Addons)
+            {
+                invoiceItem.AddAddon(InvoiceItemAddon.Create(
+                    addon.ModifierId,
+                    addon.AddonName,
+                    addon.Quantity,
+                    addon.UnitPrice));
+            }
+
+            invoice.AddItem(invoiceItem);
+        }
     }
 
     private async Task ApplyCurrentPriceSnapshotsAsync(Order order)

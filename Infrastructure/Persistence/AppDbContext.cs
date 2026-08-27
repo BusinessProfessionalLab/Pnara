@@ -62,8 +62,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.ToTable("Users");
             entity.HasKey(user => user.Id);
 
-            entity.Property(user => user.Email).HasMaxLength(256).IsRequired();
-            entity.HasIndex(user => user.Email).IsUnique();
+            entity.Property(user => user.PhoneNumber).HasMaxLength(30).IsRequired();
+            entity.HasIndex(user => user.PhoneNumber).IsUnique();
 
             entity.Property(user => user.PasswordHash).HasMaxLength(512).IsRequired();
             entity.Property(user => user.FirstName).HasMaxLength(100).IsRequired();
@@ -226,15 +226,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
+         {
+             entity.ToTable("OrderItems");
+             entity.HasKey(x => x.Id);
+             entity.Property(x => x.ProductName).HasMaxLength(200).IsRequired();
+             entity.OwnsOne(x => x.UnitPrice, money =>
+             {
+                 money.Property(x => x.Amount).HasColumnName("UnitPriceAmount").HasPrecision(18, 2);
+                 money.Property(x => x.Currency).HasColumnName("UnitPriceCurrency").HasMaxLength(10);
+             });
+             entity.HasMany(x => x.Addons)
+                 .WithOne()
+                 .HasForeignKey(x => x.OrderItemId)
+                 .OnDelete(DeleteBehavior.Cascade);
+         });
+
+        modelBuilder.Entity<OrderItemAddon>(entity =>
         {
-            entity.ToTable("OrderItems");
+            entity.ToTable("OrderItemAddons");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.ProductName).HasMaxLength(200).IsRequired();
-            entity.OwnsOne(x => x.UnitPrice, money =>
-            {
-                money.Property(x => x.Amount).HasColumnName("UnitPriceAmount").HasPrecision(18, 2);
-                money.Property(x => x.Currency).HasColumnName("UnitPriceCurrency").HasMaxLength(10);
-            });
+            entity.Property(x => x.AddonName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Quantity).HasPrecision(18, 3).IsRequired();
+            entity.Property(x => x.UnitPrice).HasPrecision(18, 2).IsRequired();
+            entity.Property(x => x.LineTotal).HasPrecision(18, 2).IsRequired();
+            entity.HasIndex(x => x.ModifierId);
+            entity.HasIndex(x => x.OrderItemId);
         });
 
         modelBuilder.Entity<PosTerminalDefinition>(entity =>
@@ -549,4 +565,5 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
+    public DbSet<OrderItemAddon> OrderItemAddons => Set<OrderItemAddon>();
 }

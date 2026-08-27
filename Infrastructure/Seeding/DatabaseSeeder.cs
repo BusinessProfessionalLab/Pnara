@@ -92,15 +92,15 @@ public static class DatabaseSeeder
         IConfiguration configuration,
         IPasswordHasher passwordHasher)
     {
-        var email = configuration["DefaultAdmin:Email"];
+        var phoneNumber = configuration["DefaultAdmin:PhoneNumber"] ?? configuration["DefaultAdmin:Email"];
         var password = configuration["DefaultAdmin:Password"];
 
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(password))
             return;
 
-        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var normalizedPhoneNumber = phoneNumber.Trim();
 
-        if (await dbContext.Users.AnyAsync(user => user.Email == normalizedEmail))
+        if (await dbContext.Users.AnyAsync(user => user.PhoneNumber == normalizedPhoneNumber))
             return;
 
         var adminRole = await dbContext.Roles.FirstOrDefaultAsync(role => role.Name == SystemRoles.Admin);
@@ -108,7 +108,7 @@ public static class DatabaseSeeder
             return;
 
         var admin = User.CreateByAdmin(
-            normalizedEmail,
+            normalizedPhoneNumber,
             passwordHasher.Hash(password),
             configuration["DefaultAdmin:FirstName"] ?? "Admin",
             configuration["DefaultAdmin:LastName"] ?? "System",

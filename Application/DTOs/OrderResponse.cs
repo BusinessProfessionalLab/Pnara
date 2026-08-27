@@ -1,5 +1,13 @@
 namespace Application.DTOs;
 
+public record OrderItemAddonResponse(
+    Guid Id,
+    Guid ModifierId,
+    string AddonName,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal LineTotal);
+
 public record OrderItemResponse(
     Guid Id,
     Guid MenuItemId,
@@ -7,7 +15,8 @@ public record OrderItemResponse(
     decimal UnitPrice,
     string Currency,
     int Quantity,
-    decimal LineTotal);
+    decimal LineTotal,
+    IReadOnlyList<OrderItemAddonResponse> Addons);
 
 public record OrderResponse(
     Guid Id,

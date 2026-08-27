@@ -20,7 +20,7 @@ public class TokenService(IOptions<JwtSettings> options) : ITokenService
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Email, user.Email),
+            new("phone_number", user.PhoneNumber),
             new("role", user.Role.Name)
         };
 
